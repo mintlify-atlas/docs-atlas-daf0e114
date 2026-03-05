@@ -1,0 +1,330 @@
+---
+title: Tips & Best Practices
+description: Essential tips, best practices, and strategies for completing TypeScript exercises successfully
+---
+
+## Core Principles
+
+<Warning>
+The golden rule: **Avoid using `any` type at all costs.** Using `any` defeats the purpose of TypeScript and the exercises.
+</Warning>
+
+The difficulty of exercises grows quickly as you progress. Each exercise builds upon concepts from previous ones, so it's important to understand each solution before moving forward.
+
+## General Best Practices
+
+### Start Simple
+
+When facing a complex type problem, break it down:
+
+<Steps>
+1. **Read the exercise description carefully** - Understand what the exercise asks you to do
+2. **Look at the data structures** - Examine the interfaces and the actual data being used
+3. **Identify the type errors** - Read the TypeScript error messages to understand what's wrong
+4. **Start with the simplest solution** - Don't over-engineer, TypeScript often has built-in utilities for common patterns
+</Steps>
+
+### Understanding Type Errors
+
+TypeScript error messages can be verbose, but they're precise:
+
+<Tip>
+Read error messages from **bottom to top**. The last error often reveals the root cause, while earlier errors may be consequences of that root issue.
+</Tip>
+
+```typescript
+// Example: Property 'role' does not exist on type 'Person'
+export function logPerson(person: Person) {
+    let additionalInformation: string;
+    if (person.role) { // Error here!
+        additionalInformation = person.role;
+    }
+}
+```
+
+This error tells you that TypeScript doesn't know that `person` has a `role` property. You need to narrow the type using type guards.
+
+## Common Pitfalls & Solutions
+
+### Pitfall 1: Not Using Type Guards
+
+<Warning>
+**Problem:** Trying to access properties that don't exist on union types.
+</Warning>
+
+When you have a union type like `User | Admin`, TypeScript only allows you to access properties that exist on **both** types.
+
+**Solution:** Use type guards to narrow the type:
+
+```typescript
+// Using 'in' operator (Exercise 3)
+if ('role' in person) {
+    console.log(person.role); // TypeScript knows it's Admin
+}
+
+// Using type predicates (Exercise 4)
+function isAdmin(person: Person): person is Admin {
+    return person.type === 'admin';
+}
+
+if (isAdmin(person)) {
+    console.log(person.role); // Type is narrowed to Admin
+}
+```
+
+### Pitfall 2: Duplicating Type Structures
+
+<Warning>
+**Problem:** Manually rewriting all properties instead of using utility types.
+</Warning>
+
+**Solution:** Leverage TypeScript's utility types:
+
+```typescript
+// Don't do this:
+type UserCriteria = {
+    name?: string;
+    age?: number;
+    occupation?: string;
+}
+
+// Do this instead (Exercise 5):
+type UserCriteria = Partial<User>;
+
+// For complex cases (Exercise 8):
+type PowerUser = Omit<User, 'type'> & Omit<Admin, 'type'> & {
+    type: 'powerUser';
+};
+```
+
+### Pitfall 3: Over-Constraining Generic Types
+
+<Warning>
+**Problem:** Making generics too specific, reducing their reusability.
+</Warning>
+
+**Solution:** Keep generics flexible:
+
+```typescript
+// Too specific:
+function swap(v1: Person, v2: Person): [Person, Person] {
+    return [v2, v1];
+}
+
+// Better - works with any types (Exercise 7):
+function swap<T, U>(v1: T, v2: U): [U, T] {
+    return [v2, v1];
+}
+```
+
+### Pitfall 4: Not Understanding Module Systems
+
+<Note>
+Exercises 11-13 deal with type declarations and module augmentation. These concepts are crucial for working with third-party libraries.
+</Note>
+
+**Key concepts:**
+
+- `.d.ts` files contain only type information, no runtime code
+- Use `declare module` to provide types for JavaScript libraries
+- Module augmentation lets you extend existing type declarations
+
+```typescript
+// Type declaration file (Exercise 11)
+declare module 'str-utils' {
+    export function strReverse(str: string): string;
+    export function strToLower(str: string): string;
+}
+
+// Module augmentation (Exercise 13)
+declare module 'date-wizard' {
+    interface DateDetails {
+        hours: number;    // Adding missing properties
+        minutes: number;
+        seconds: number;
+    }
+}
+```
+
+## Debugging Strategies
+
+### Strategy 1: Hover for Type Information
+
+<Tip>
+Hover over variables and functions in your IDE to see what TypeScript infers. This helps you understand where types diverge from your expectations.
+</Tip>
+
+### Strategy 2: Use Type Assertions Carefully
+
+```typescript
+// Use 'as const' for literal types
+const config = {
+    apiUrl: 'https://api.example.com',
+    timeout: 5000
+} as const; // Makes properties readonly and literal
+
+// Avoid 'as any' - it defeats the purpose
+const value = someFunction() as any; // Don't do this!
+```
+
+### Strategy 3: Incremental Typing
+
+<Steps>
+1. Replace `unknown` or `any` with a basic type
+2. Run TypeScript to see what errors appear
+3. Refine the type based on errors and requirements
+4. Repeat until all errors are resolved
+</Steps>
+
+### Strategy 4: Read the Hints
+
+Every exercise includes a link to relevant TypeScript documentation:
+
+```typescript
+// In case you are stuck:
+// https://www.typescriptlang.org/docs/handbook/...
+```
+
+<Tip>
+These links point to exactly the concepts you need. Read them thoroughly before attempting complex solutions.
+</Tip>
+
+## Advanced TypeScript Tips
+
+### Working with Generics (Exercises 7, 10, 14)
+
+Generics make your code reusable:
+
+```typescript
+// Simple generic
+function identity<T>(arg: T): T {
+    return arg;
+}
+
+// Generic with constraints
+function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
+    return obj[key];
+}
+
+// Generic with multiple type parameters (Exercise 10)
+function promisify<T>(
+    fn: (callback: (response: ApiResponse<T>) => void) => void
+): () => Promise<T> {
+    return () => new Promise((resolve, reject) => {
+        fn((response) => {
+            if (response.status === 'success') {
+                resolve(response.data);
+            } else {
+                reject(new Error(response.error));
+            }
+        });
+    });
+}
+```
+
+### Mapped Types (Exercise 15)
+
+For advanced type transformations:
+
+```typescript
+// Make all properties of T have type U
+type ObjectWithProps<T> = {
+    [K in keyof T]: T[K];
+};
+
+// Conditional types
+type NonNullableProps<T> = {
+    [K in keyof T]: NonNullable<T[K]>;
+};
+```
+
+### Function Overloads (Exercise 14)
+
+<Note>
+Function overloads let you specify multiple function signatures for different use cases.
+</Note>
+
+```typescript
+// Declare overloads
+function map<T, U>(mapper: (item: T) => U, input: T[]): U[];
+function map<T, U>(mapper: (item: T) => U): (input: T[]) => U[];
+function map(): typeof map;
+
+// Implementation signature
+function map(mapper?, input?) {
+    // Implementation here
+}
+```
+
+## TypeScript Configuration Tips
+
+<Tip>
+The exercises use strict TypeScript settings. This catches more errors but requires more precise typing.
+</Tip>
+
+Key compiler options you'll encounter:
+
+- `strict: true` - Enables all strict type checking options
+- `noImplicitAny: true` - Flags implicit `any` types
+- `strictNullChecks: true` - `null` and `undefined` must be explicitly handled
+- `strictFunctionTypes: true` - Function parameters are checked contravariantly
+
+## Performance Tips
+
+<Note>
+TypeScript type checking happens at compile time, so type complexity doesn't affect runtime performance.
+</Note>
+
+However, complex types can slow down IDE performance:
+
+- Avoid deeply nested conditional types when simpler solutions exist
+- Use type aliases to make complex types more readable
+- Break down complex types into smaller, reusable pieces
+
+## Getting Unstuck
+
+<Accordion title="I'm getting confusing type errors">
+1. Check if you're using the correct TypeScript version
+2. Make sure all required types are imported
+3. Look at the exercise solution file (`index.solution.ts`) for hints about the approach
+4. Simplify the problem: comment out code until errors are manageable, then add back gradually
+</Accordion>
+
+<Accordion title="My solution works but types are wrong">
+TypeScript is a static type system. If your types are wrong, you haven't truly solved the exercise. The goal is to make TypeScript understand your code, not just to make it run.
+
+- Revisit the exercise requirements
+- Check if you're using `any` somewhere (forbidden!)
+- Verify your solution matches the expected behavior
+</Accordion>
+
+<Accordion title="I don't understand the error message">
+1. Copy the error into a search engine with "TypeScript" prefix
+2. Read the linked documentation in the exercise
+3. Use the TypeScript Playground to experiment with minimal reproductions
+4. Break down complex types to see where the mismatch occurs
+</Accordion>
+
+## Key Takeaways
+
+<CardGroup cols={2}>
+<Card title="Never Use Any" icon="ban">
+The `any` type disables TypeScript's type checking. It's explicitly forbidden in these exercises.
+</Card>
+
+<Card title="Read Error Messages" icon="exclamation-triangle">
+TypeScript errors are precise. They tell you exactly what's wrong and often suggest solutions.
+</Card>
+
+<Card title="Use Built-in Utilities" icon="toolbox">
+TypeScript provides utility types like `Partial`, `Pick`, `Omit`, and more. Don't reinvent them.
+</Card>
+
+<Card title="Type Guards Are Essential" icon="shield">
+Narrowing types with guards is fundamental to working with union types effectively.
+</Card>
+</CardGroup>
+
+<Tip>
+Remember: The goal isn't just to complete exercises, but to deeply understand TypeScript's type system. Take your time and experiment!
+</Tip>

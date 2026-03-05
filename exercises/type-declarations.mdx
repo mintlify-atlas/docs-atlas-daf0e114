@@ -1,0 +1,406 @@
+---
+title: Type Declarations (Exercises 11-12)
+description: Learn to write declaration files for JavaScript libraries without TypeScript types
+---
+
+When using JavaScript libraries that lack TypeScript declarations, you need to write `.d.ts` files to describe their types. These exercises teach you how to provide type safety for external modules.
+
+## Exercise 11: Basic Module Declarations
+
+### Scenario
+
+You're using `str-utils`, a JavaScript library for string manipulation, but it has no TypeScript declarations. You need to create type definitions so TypeScript understands the library's API.
+
+### The Problem
+
+```typescript
+import {
+    strReverse,
+    strToLower,
+    strToUpper,
+    strRandomize,
+    strInvertCase
+} from 'str-utils';  // ❌ Error: Cannot find module 'str-utils'
+
+export const nameDecorators = [
+    strReverse,    // any
+    strToLower,    // any
+    strToUpper,    // any
+    strRandomize,  // any
+    strInvertCase  // any
+];
+```
+
+<Warning>
+  Without type declarations, TypeScript treats all imports as `any`, losing type safety.
+</Warning>
+
+### Understanding Declaration Files
+
+Declaration files (`.d.ts`) describe the shape of JavaScript code without implementation:
+
+```typescript
+// declarations/str-utils/index.d.ts
+declare module 'str-utils' {
+    // Type declarations only, no implementation
+    export const strReverse: (input: string) => string;
+    export const strToUpper: (input: string) => string;
+    // ...
+}
+```
+
+### Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Ambient Modules" icon="box">
+    `declare module` tells TypeScript about external modules
+  </Card>
+  
+  <Card title="Type Aliases" icon="clone">
+    Avoid duplication by creating reusable type definitions
+  </Card>
+</CardGroup>
+
+### Solution
+
+Create a declaration file at `declarations/str-utils/index.d.ts`:
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    // declarations/str-utils/index.d.ts
+    declare module 'str-utils' {
+        // export const ...
+        // export function ...
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    // declarations/str-utils/index.d.ts
+    declare module 'str-utils' {
+        type StrUtil = (input: string) => string;
+    
+        export const strReverse: StrUtil;
+        export const strToLower: StrUtil;
+        export const strToUpper: StrUtil;
+        export const strRandomize: StrUtil;
+        export const strInvertCase: StrUtil;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Accordion title="Why use a type alias?">
+  All the functions have the same signature: `(input: string) => string`
+  
+  **Without alias:**
+  ```typescript
+  export const strReverse: (input: string) => string;
+  export const strToLower: (input: string) => string;
+  export const strToUpper: (input: string) => string;
+  // Repetitive and error-prone
+  ```
+  
+  **With alias:**
+  ```typescript
+  type StrUtil = (input: string) => string;
+  export const strReverse: StrUtil;
+  export const strToLower: StrUtil;
+  export const strToUpper: StrUtil;
+  // DRY and maintainable
+  ```
+</Accordion>
+
+### Using the Typed Library
+
+Now TypeScript understands the library:
+
+```typescript
+import { strReverse, strToUpper } from 'str-utils';
+
+function logPerson(person: Person) {
+    const randomDecorator = nameDecorators[
+        Math.round(Math.random() * (nameDecorators.length - 1))
+    ];
+    const name = randomDecorator(person.name);  // Type-safe!
+    console.log(`${name}, ${person.age}`);
+}
+
+// Type checking works
+strReverse('hello');      // ✅ OK
+strReverse(123);          // ❌ Error: Argument of type 'number' is not assignable
+const result = strToUpper('test');  // result: string
+```
+
+---
+
+## Exercise 12: Advanced Generic Declarations
+
+### Scenario
+
+You're using `stats`, a library with functions for finding max, min, median, and average values. These functions are generic and work with any type, using comparator functions.
+
+### The Problem
+
+```typescript
+import {
+    getMaxIndex,
+    getMaxElement,
+    getMinIndex,
+    getMinElement,
+    getMedianIndex,
+    getMedianElement,
+    getAverageValue
+} from 'stats';  // ❌ Error: Cannot find module 'stats'
+
+const compareUsers = (a: User, b: User) => a.age - b.age;
+const youngestUser = getMinElement(users, compareUsers);  // any
+```
+
+### Understanding the Library
+
+The library has three categories of functions:
+
+<Steps>
+  <Step title="Index Functions">
+    Return the index of an element
+    ```typescript
+    getMaxIndex(users, compareUsers)    // Returns: number
+    getMinIndex(users, compareUsers)    // Returns: number
+    getMedianIndex(users, compareUsers) // Returns: number
+    ```
+  </Step>
+  
+  <Step title="Element Functions">
+    Return the element itself or null
+    ```typescript
+    getMaxElement(users, compareUsers)    // Returns: User | null
+    getMinElement(users, compareUsers)    // Returns: User | null
+    getMedianElement(users, compareUsers) // Returns: User | null
+    ```
+  </Step>
+  
+  <Step title="Value Function">
+    Return a computed numeric value
+    ```typescript
+    getAverageValue(users, (u) => u.age)  // Returns: number | null
+    ```
+  </Step>
+</Steps>
+
+### Solution
+
+Create a declaration file with generic types:
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    // declarations/stats/index.d.ts
+    declare module 'stats' {
+        export function getMaxIndex(input: unknown, comparator: unknown): unknown;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    // declarations/stats/index.d.ts
+    declare module 'stats' {
+        type Comparator<T> = (a: T, b: T) => number;
+    
+        type GetIndex = <T>(input: T[], comparator: Comparator<T>) => number;
+        export const getMaxIndex: GetIndex;
+        export const getMinIndex: GetIndex;
+        export const getMedianIndex: GetIndex;
+    
+        type GetElement = <T>(input: T[], comparator: Comparator<T>) => T | null;
+        export const getMaxElement: GetElement;
+        export const getMinElement: GetElement;
+        export const getMedianElement: GetElement;
+    
+        export const getAverageValue: <T>(
+            input: T[], 
+            getValue: (item: T) => number
+        ) => number | null;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Breaking Down the Solution
+
+<Accordion title="Comparator Type">
+  ```typescript
+  type Comparator<T> = (a: T, b: T) => number;
+  ```
+  
+  A comparator takes two items of the same type and returns:
+  - Negative number if `a < b`
+  - Zero if `a === b`
+  - Positive number if `a > b`
+  
+  Example:
+  ```typescript
+  const compareUsers: Comparator<User> = (a, b) => a.age - b.age;
+  const compareAdmins: Comparator<Admin> = (a, b) => a.age - b.age;
+  ```
+</Accordion>
+
+<Accordion title="GetIndex Type">
+  ```typescript
+  type GetIndex = <T>(input: T[], comparator: Comparator<T>) => number;
+  ```
+  
+  This is a generic function type that:
+  1. Takes an array of any type `T[]`
+  2. Takes a comparator for that type
+  3. Returns the index as a `number`
+  
+  All three index functions share this signature, so we define it once.
+</Accordion>
+
+<Accordion title="GetElement Type">
+  ```typescript
+  type GetElement = <T>(input: T[], comparator: Comparator<T>) => T | null;
+  ```
+  
+  Similar to `GetIndex`, but returns the element itself (or `null` if the array is empty).
+</Accordion>
+
+### Using the Typed Library
+
+```typescript
+const users: User[] = [
+    { type: 'user', name: 'Max Mustermann', age: 25, occupation: 'Chimney sweep' },
+    { type: 'user', name: 'Kate Müller', age: 23, occupation: 'Astronaut' },
+    { type: 'user', name: 'Moses', age: 70, occupation: 'Desert guide' }
+];
+
+const compareUsers = (a: User, b: User) => a.age - b.age;
+
+// All properly typed now
+const youngestUser = getMinElement(users, compareUsers);  // User | null
+const oldestIndex = getMaxIndex(users, compareUsers);     // number
+const medianUser = getMedianElement(users, compareUsers); // User | null
+
+// Type checking works
+if (youngestUser) {
+    console.log(youngestUser.name, youngestUser.age);  // ✅ OK
+}
+
+// Errors caught at compile time
+getMinElement(users, (a, b) => a.name);  // ❌ Error: Type 'string' not assignable to 'number'
+```
+
+### Generic Value Extraction
+
+```typescript
+export const getAverageValue: <T>(
+    input: T[], 
+    getValue: (item: T) => number
+) => number | null;
+
+// Usage
+const avgUserAge = getAverageValue(users, (u) => u.age);
+// Type: number | null
+
+const avgAdminAge = getAverageValue(admins, (a) => a.age);
+// Type: number | null
+
+console.log(`Average user age: ${avgUserAge} years`);
+```
+
+## Declaration File Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Avoid Duplication" icon="clone">
+    Use type aliases for repeated signatures
+  </Card>
+  
+  <Card title="Match Runtime Behavior" icon="equals">
+    Declarations should accurately reflect the JavaScript API
+  </Card>
+  
+  <Card title="Be Specific" icon="bullseye">
+    Use precise types rather than `any` or `unknown`
+  </Card>
+  
+  <Card title="Document Edge Cases" icon="circle-exclamation">
+    Use `| null` or `| undefined` when functions can return these
+  </Card>
+</CardGroup>
+
+### Common Declaration Patterns
+
+<CodeGroup>
+  ```typescript Constants
+  declare module 'my-lib' {
+      export const VERSION: string;
+      export const CONFIG: { timeout: number; retries: number; };
+  }
+  ```
+  
+  ```typescript Functions
+  declare module 'my-lib' {
+      export function parse(input: string): object;
+      export function stringify(obj: object): string;
+  }
+  ```
+  
+  ```typescript Classes
+  declare module 'my-lib' {
+      export class Logger {
+          constructor(name: string);
+          log(message: string): void;
+          error(message: string): void;
+      }
+  }
+  ```
+  
+  ```typescript Mixed Exports
+  declare module 'my-lib' {
+      export interface Options {
+          verbose?: boolean;
+      }
+      
+      export function init(options: Options): void;
+      export const version: string;
+  }
+  ```
+</CodeGroup>
+
+## What You Learned
+
+<AccordionGroup>
+  <Accordion title="Ambient Modules">
+    Use `declare module 'name'` to define types for external JavaScript modules
+  </Accordion>
+  
+  <Accordion title="Generic Declarations">
+    Write generic type definitions that work with any type while maintaining safety
+  </Accordion>
+  
+  <Accordion title="Type Aliases in Declarations">
+    Reduce duplication by defining reusable type aliases
+  </Accordion>
+  
+  <Accordion title="Nullable Returns">
+    Use `T | null` to represent functions that might not return a value
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  For popular libraries, check [DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) before writing your own declarations. Many community-maintained types are available via `@types/*` packages.
+</Tip>
+
+## Next Steps
+
+Move on to [Module Augmentation](/exercises/module-augmentation) to learn how to extend existing type declarations.
+
+## Additional Resources
+
+- [TypeScript Handbook: Declaration Files](https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html)
+- [TypeScript Handbook: Ambient Modules](https://www.typescriptlang.org/docs/handbook/modules.html#ambient-modules)
+- [DefinitelyTyped Repository](https://github.com/DefinitelyTyped/DefinitelyTyped)

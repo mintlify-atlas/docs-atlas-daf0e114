@@ -1,0 +1,435 @@
+---
+title: Module Augmentation (Exercise 13)
+description: Learn to extend existing module type declarations with declaration merging
+---
+
+## Exercise 13: Augmenting Third-Party Module Types
+
+### Scenario
+
+You're using the `date-wizard` library to format dates. The library comes with type declarations, but they're incomplete - missing time-related fields and some exported functions.
+
+### The Problem
+
+The existing declaration file is incomplete:
+
+```typescript
+// node_modules/date-wizard/index.d.ts (existing, incomplete)
+declare module 'date-wizard' {
+    interface DateDetails {
+        year: number;
+        month: number;
+        date: number;
+        // ❌ Missing: hours, minutes, seconds
+    }
+    
+    function dateWizard(date: Date, format: string): string;
+    function dateDetails(date: Date): DateDetails;
+    
+    // ❌ Missing: pad function
+}
+```
+
+Using the missing features causes errors:
+
+```typescript
+import * as dateWizard from 'date-wizard';
+
+function logPerson(person: Person, index: number) {
+    let registeredAt = dateWizard(
+        person.registered, 
+        '{date}.{month}.{year} {hours}:{minutes}'  // Using hours/minutes
+    );
+    let num = `#${dateWizard.pad(index + 1)}`;  // ❌ Error: 'pad' doesn't exist
+    console.log(`${num}: ${person.name}, ${registeredAt}`);
+}
+
+console.log('Early birds:');
+persons
+    .filter((person) => 
+        dateWizard.dateDetails(person.registered).hours < 10  // ❌ Error: 'hours' doesn't exist
+    )
+    .forEach(logPerson);
+```
+
+<Warning>
+  You cannot modify the original declaration file in `node_modules` - it would be overwritten on the next install. You need module augmentation.
+</Warning>
+
+### Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Module Augmentation" icon="puzzle-piece">
+    Extend existing module declarations without modifying the original files
+  </Card>
+  
+  <Card title="Declaration Merging" icon="layer-group">
+    TypeScript merges multiple declarations of the same interface/module
+  </Card>
+</CardGroup>
+
+### Understanding Module Augmentation
+
+Module augmentation allows you to add to existing type declarations:
+
+```typescript
+// Your augmentation file
+import 'date-wizard';  // This enables augmentation mode
+
+declare module 'date-wizard' {
+    // Add missing declarations
+    // TypeScript merges this with the original
+}
+```
+
+<Note>
+  The `import` statement at the top is crucial - it tells TypeScript you're augmenting an existing module, not declaring a new one.
+</Note>
+
+### Solution
+
+Create an augmentation file at `module-augmentations/date-wizard/index.ts`:
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    // module-augmentations/date-wizard/index.ts
+    import 'date-wizard';
+    
+    declare module 'date-wizard' {
+        // Add your module extensions here.
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    // module-augmentations/date-wizard/index.ts
+    import 'date-wizard';
+    
+    declare module 'date-wizard' {
+        const pad: (ident: number) => string;
+    
+        interface DateDetails {
+            hours: number;
+            minutes: number;
+            seconds: number;
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### How Declaration Merging Works
+
+<Steps>
+  <Step title="Original Declaration">
+    ```typescript
+    // node_modules/date-wizard/index.d.ts
+    interface DateDetails {
+        year: number;
+        month: number;
+        date: number;
+    }
+    ```
+  </Step>
+  
+  <Step title="Your Augmentation">
+    ```typescript
+    // module-augmentations/date-wizard/index.ts
+    interface DateDetails {
+        hours: number;
+        minutes: number;
+        seconds: number;
+    }
+    ```
+  </Step>
+  
+  <Step title="Merged Result">
+    ```typescript
+    // TypeScript sees
+    interface DateDetails {
+        year: number;
+        month: number;
+        date: number;
+        hours: number;    // Added
+        minutes: number;  // Added
+        seconds: number;  // Added
+    }
+    ```
+  </Step>
+</Steps>
+
+### Using the Augmented Module
+
+Now all features work with full type safety:
+
+```typescript
+import * as dateWizard from 'date-wizard';
+import './module-augmentations/date-wizard';  // Load augmentations
+
+interface User {
+    type: 'user';
+    name: string;
+    age: number;
+    occupation: string;
+    registered: Date;
+}
+
+const users: User[] = [
+    { 
+        type: 'user', 
+        name: 'Max Mustermann', 
+        age: 25, 
+        occupation: 'Chimney sweep',
+        registered: new Date('2016-02-15T09:25:13')
+    },
+    { 
+        type: 'user', 
+        name: 'Kate Müller', 
+        age: 23, 
+        occupation: 'Astronaut',
+        registered: new Date('2016-03-23T12:47:03')
+    }
+];
+
+function logPerson(person: User, index: number) {
+    let registeredAt = dateWizard(
+        person.registered, 
+        '{date}.{month}.{year} {hours}:{minutes}'  // ✅ OK
+    );
+    let num = `#${dateWizard.pad(index + 1)}`;  // ✅ OK
+    console.log(`${num}: ${person.name}, ${person.age}, ${person.occupation}, ${registeredAt}`);
+}
+
+console.log('All users:');
+users.forEach(logPerson);
+// Output:
+//  #01: Max Mustermann, 25, Chimney sweep, 15.02.2016 09:25
+//  #02: Kate Müller, 23, Astronaut, 23.03.2016 12:47
+
+console.log('Early birds:');
+users
+    .filter((person) => 
+        dateWizard.dateDetails(person.registered).hours < 10  // ✅ OK
+    )
+    .forEach(logPerson);
+// Output:
+//  #01: Max Mustermann, 25, Chimney sweep, 15.02.2016 09:25
+```
+
+### When to Use Module Augmentation
+
+<CardGroup cols={2}>
+  <Card title="Incomplete Types" icon="puzzle-piece">
+    Library has declarations but they're missing features
+  </Card>
+  
+  <Card title="Plugin Systems" icon="plug">
+    You've added plugins that extend the base library
+  </Card>
+  
+  <Card title="Monkey Patching" icon="wrench">
+    You've extended a library's prototype at runtime
+  </Card>
+  
+  <Card title="Global Augmentations" icon="globe">
+    Adding to global objects like `Window` or `Array`
+  </Card>
+</CardGroup>
+
+### Common Augmentation Patterns
+
+<Accordion title="Augmenting Interfaces">
+  Add properties to existing interfaces:
+  
+  ```typescript
+  import 'express';
+  
+  declare module 'express' {
+      interface Request {
+          user?: User;  // Add user property to Express Request
+      }
+  }
+  
+  // Usage
+  app.get('/profile', (req, res) => {
+      const user = req.user;  // ✅ TypeScript knows about user
+  });
+  ```
+</Accordion>
+
+<Accordion title="Adding New Exports">
+  Add missing functions or constants:
+  
+  ```typescript
+  import 'my-lib';
+  
+  declare module 'my-lib' {
+      export function newFunction(x: number): string;
+      export const NEW_CONSTANT: string;
+  }
+  ```
+</Accordion>
+
+<Accordion title="Augmenting Global Scope">
+  Extend built-in globals:
+  
+  ```typescript
+  declare global {
+      interface Window {
+          myApp: {
+              version: string;
+              init: () => void;
+          };
+      }
+  }
+  
+  // Usage
+  window.myApp.init();  // ✅ OK
+  ```
+</Accordion>
+
+<Accordion title="Augmenting Classes">
+  Add methods to existing classes:
+  
+  ```typescript
+  import 'my-lib';
+  
+  declare module 'my-lib' {
+      interface MyClass {
+          newMethod(param: string): number;
+      }
+  }
+  ```
+</Accordion>
+
+### Best Practices
+
+<Warning>
+  **Don't augment with conflicting types**
+  
+  ```typescript
+  // Bad: Changing existing property type
+  interface DateDetails {
+      year: string;  // ❌ Was number, now string - breaks existing code
+  }
+  
+  // Good: Only add new properties
+  interface DateDetails {
+      hours: number;   // ✅ New property
+      minutes: number; // ✅ New property
+  }
+  ```
+</Warning>
+
+<Tip>
+  **Organize augmentations by module**
+  
+  Create a dedicated directory for augmentations:
+  ```
+  module-augmentations/
+    express/
+      index.ts
+    date-wizard/
+      index.ts
+    lodash/
+      index.ts
+  ```
+</Tip>
+
+### Real-World Example: Express with Custom Properties
+
+```typescript
+// augmentations/express/index.ts
+import 'express';
+import { User } from '../../types';
+
+declare module 'express' {
+    interface Request {
+        user?: User;
+        requestId: string;
+    }
+    
+    interface Response {
+        sendSuccess<T>(data: T): void;
+        sendError(error: string, code: number): void;
+    }
+}
+
+// Now you can use these in your Express app
+import express from 'express';
+import './augmentations/express';
+
+const app = express();
+
+app.use((req, res, next) => {
+    req.requestId = generateId();  // ✅ OK
+    next();
+});
+
+app.get('/user', (req, res) => {
+    if (!req.user) {  // ✅ OK
+        res.sendError('Not authenticated', 401);  // ✅ OK
+        return;
+    }
+    res.sendSuccess(req.user);  // ✅ OK
+});
+```
+
+### Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Augmentation not working?">
+    Make sure you:
+    1. Import the original module: `import 'module-name';`
+    2. Import your augmentation file in your code
+    3. Include the augmentation file in your `tsconfig.json`
+  </Accordion>
+  
+  <Accordion title="Getting duplicate identifier errors?">
+    You might be declaring new properties instead of augmenting. Make sure:
+    1. You have the import statement
+    2. You're using the same interface/type names as the original
+  </Accordion>
+  
+  <Accordion title="Augmentation not visible in other files?">
+    Augmentations are global - once loaded, they affect all imports of that module. Import your augmentation file in your entry point:
+    
+    ```typescript
+    // index.ts
+    import './module-augmentations/date-wizard';
+    import './module-augmentations/express';
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## What You Learned
+
+<AccordionGroup>
+  <Accordion title="Module Augmentation">
+    Extend third-party module types without modifying their source code
+  </Accordion>
+  
+  <Accordion title="Declaration Merging">
+    TypeScript automatically merges multiple declarations of interfaces and modules
+  </Accordion>
+  
+  <Accordion title="Import for Augmentation">
+    The import statement enables augmentation mode instead of creating a new module
+  </Accordion>
+  
+  <Accordion title="Type Safety">
+    Add type information for runtime extensions and monkey patches
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Continue to [Advanced Type Mapping](/exercises/advanced-type-mapping) to learn complex type transformations and manipulations.
+
+## Additional Resources
+
+- [TypeScript Handbook: Module Augmentation](https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation)
+- [TypeScript Handbook: Declaration Merging](https://www.typescriptlang.org/docs/handbook/declaration-merging.html)
+- [TypeScript Handbook: Global Augmentation](https://www.typescriptlang.org/docs/handbook/declaration-merging.html#global-augmentation)

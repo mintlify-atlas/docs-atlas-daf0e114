@@ -1,0 +1,570 @@
+---
+title: 'Utility Types'
+description: 'Master TypeScript built-in utility types like Partial, Pick, Omit, Record, ReturnType, and more with practical examples'
+---
+
+## What are Utility Types?
+
+Utility types are built-in generic types that help transform and manipulate existing types. They enable powerful type transformations without code duplication.
+
+## Essential Utility Types
+
+### `Partial<Type>`
+
+Makes all properties of a type optional.
+
+From [Exercise 5](/exercises/merged-types), here's a practical example:
+
+```typescript
+interface User {
+    type: 'user';
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+// Partial makes all properties optional
+type PartialUser = Partial<User>;
+// Equivalent to:
+// {
+//     type?: 'user';
+//     name?: string;
+//     age?: number;
+//     occupation?: string;
+// }
+
+function filterUsers(
+    persons: Person[],
+    criteria: Partial<User>  // Can pass any subset of User properties
+): User[] {
+    return persons.filter(isUser).filter((user) => {
+        const criteriaKeys = Object.keys(criteria) as (keyof User)[];
+        return criteriaKeys.every((fieldName) => {
+            return user[fieldName] === criteria[fieldName];
+        });
+    });
+}
+
+// Usage - can filter by any combination of properties
+filterUsers(persons, { age: 23 });
+filterUsers(persons, { age: 23, occupation: 'Astronaut' });
+```
+
+<Tip>
+`Partial` is perfect for:
+- Update functions that accept partial data
+- Filter/search criteria objects
+- Configuration objects with defaults
+- Optional patch operations
+</Tip>
+
+### `Required<Type>`
+
+Makes all properties of a type required (opposite of `Partial`):
+
+```typescript
+interface User {
+    name: string;
+    age?: number;
+    email?: string;
+}
+
+type RequiredUser = Required<User>;
+// {
+//     name: string;
+//     age: number;      // No longer optional
+//     email: string;    // No longer optional
+// }
+```
+
+### `Readonly<Type>`
+
+Makes all properties readonly:
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+}
+
+type ReadonlyUser = Readonly<User>;
+// {
+//     readonly name: string;
+//     readonly age: number;
+// }
+
+const user: ReadonlyUser = { name: 'John', age: 30 };
+// user.name = 'Jane'; // Error: Cannot assign to 'name' because it is a read-only property
+```
+
+### `Pick<Type, Keys>`
+
+Creates a type by picking specific properties from another type:
+
+```typescript
+interface User {
+    type: 'user';
+    name: string;
+    age: number;
+    occupation: string;
+    email: string;
+    password: string;
+}
+
+// Pick only the properties we want to display
+type UserProfile = Pick<User, 'name' | 'age' | 'occupation'>;
+// {
+//     name: string;
+//     age: number;
+//     occupation: string;
+// }
+
+function displayProfile(user: UserProfile) {
+    console.log(`${user.name}, ${user.age}, ${user.occupation}`);
+}
+```
+
+<Note>
+`Pick` is useful for:
+- Creating DTOs (Data Transfer Objects)
+- Selecting fields for API responses
+- Creating view models from domain models
+- Type-safe property selection
+</Note>
+
+### `Omit<Type, Keys>`
+
+From [Exercise 5](/exercises/merged-types), creates a type by omitting specific properties:
+
+```typescript
+interface User {
+    type: 'user';
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+// Omit the 'type' field for filter criteria
+type UserCriteria = Omit<User, 'type'>;
+// {
+//     name: string;
+//     age: number;
+//     occupation: string;
+// }
+
+function filterUsers(
+    persons: Person[],
+    criteria: Partial<Omit<User, 'type'>>  // Can't filter by type
+): User[] {
+    return persons.filter(isUser).filter((user) => {
+        const criteriaKeys = Object.keys(criteria) as (keyof Omit<User, 'type'>)[];
+        return criteriaKeys.every((fieldName) => {
+            return user[fieldName] === criteria[fieldName];
+        });
+    });
+}
+
+// Usage
+filterUsers(persons, { age: 23 });  // ✓ Works
+// filterUsers(persons, { type: 'user' });  // ✗ Error: 'type' is not in UserCriteria
+```
+
+<Tabs>
+  <Tab title="Pick">
+    ```typescript
+    // Pick: Select specific properties
+    type UserBasic = Pick<User, 'name' | 'age'>;
+    
+    // Use when you know what to include
+    ```
+  </Tab>
+  <Tab title="Omit">
+    ```typescript
+    // Omit: Exclude specific properties
+    type UserWithoutType = Omit<User, 'type'>;
+    
+    // Use when you know what to exclude
+    ```
+  </Tab>
+</Tabs>
+
+### `Record<Keys, Type>`
+
+Creates an object type with specified keys and value type:
+
+```typescript
+type Role = 'admin' | 'user' | 'guest';
+
+type Permissions = Record<Role, string[]>;
+// {
+//     admin: string[];
+//     user: string[];
+//     guest: string[];
+// }
+
+const permissions: Permissions = {
+    admin: ['read', 'write', 'delete'],
+    user: ['read', 'write'],
+    guest: ['read']
+};
+
+// Another example: mapping user IDs to users
+type UserMap = Record<string, User>;
+
+const users: UserMap = {
+    'user-1': { type: 'user', name: 'John', age: 30, occupation: 'Developer' },
+    'user-2': { type: 'user', name: 'Jane', age: 25, occupation: 'Designer' }
+};
+```
+
+<Tip>
+`Record` is perfect for:
+- Creating lookup tables/maps
+- Ensuring all enum values are handled
+- Type-safe dictionaries
+- Configuration objects
+</Tip>
+
+## Function-Related Utility Types
+
+### `ReturnType<Type>`
+
+Extracts the return type of a function:
+
+```typescript
+function getUser() {
+    return {
+        name: 'John',
+        age: 30,
+        occupation: 'Developer'
+    };
+}
+
+type User = ReturnType<typeof getUser>;
+// {
+//     name: string;
+//     age: number;
+//     occupation: string;
+// }
+
+// Another example from Exercise 4
+function isAdmin(person: Person): person is Admin {
+    return person.type === 'admin';
+}
+
+type IsAdminReturn = ReturnType<typeof isAdmin>;  // boolean
+```
+
+### `Parameters<Type>`
+
+Extracts function parameter types as a tuple:
+
+```typescript
+function filterUsers(
+    persons: Person[],
+    criteria: Partial<User>
+): User[] {
+    // ...
+}
+
+type FilterUsersParams = Parameters<typeof filterUsers>;
+// [persons: Person[], criteria: Partial<User>]
+
+// Access individual parameters
+type FirstParam = FilterUsersParams[0];   // Person[]
+type SecondParam = FilterUsersParams[1];  // Partial<User>
+```
+
+### `Awaited<Type>`
+
+Extracts the type that a Promise resolves to:
+
+```typescript
+type AsyncUser = Promise<User>;
+type ResolvedUser = Awaited<AsyncUser>;  // User
+
+// Works with nested Promises
+type NestedPromise = Promise<Promise<User>>;
+type Resolved = Awaited<NestedPromise>;  // User
+
+async function fetchUser(): Promise<User> {
+    // ...
+}
+
+type FetchedUser = Awaited<ReturnType<typeof fetchUser>>;  // User
+```
+
+## Combining Utility Types
+
+From [Exercise 5](/exercises/merged-types), utility types can be combined for complex transformations:
+
+```typescript
+interface User {
+    type: 'user';
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+// Combine Partial and Omit
+type UserFilterCriteria = Partial<Omit<User, 'type'>>;
+// {
+//     name?: string;
+//     age?: number;
+//     occupation?: string;
+// }
+
+// Combine Pick and Readonly
+type UserDisplayInfo = Readonly<Pick<User, 'name' | 'age'>>;
+// {
+//     readonly name: string;
+//     readonly age: number;
+// }
+```
+
+<Warning>
+When combining utility types, the order matters:
+
+```typescript
+// Different results:
+type A = Partial<Omit<User, 'type'>>;  // Omit first, then make optional
+type B = Omit<Partial<User>, 'type'>;  // Make optional first, then omit
+
+// A has optional properties (better for our use case)
+// B omits an already-optional property
+```
+</Warning>
+
+## Advanced Utility Types
+
+### `Exclude<Type, ExcludedUnion>`
+
+Excludes types from a union:
+
+```typescript
+type Person Type = 'user' | 'admin' | 'guest';
+
+type ActivePersonType = Exclude<PersonType, 'guest'>;
+// 'user' | 'admin'
+
+// Practical example
+type Person = User | Admin | Guest;
+type ActivePerson = Exclude<Person, Guest>;
+```
+
+### `Extract<Type, Union>`
+
+Extracts types from a union:
+
+```typescript
+type PersonType = 'user' | 'admin' | 'guest';
+
+type PrivilegedType = Extract<PersonType, 'user' | 'admin'>;
+// 'user' | 'admin'
+```
+
+### `NonNullable<Type>`
+
+Removes `null` and `undefined` from a type:
+
+```typescript
+type MaybeUser = User | null | undefined;
+
+type DefiniteUser = NonNullable<MaybeUser>;
+// User
+
+function processUser(user: MaybeUser) {
+    if (user) {
+        const definiteUser: NonNullable<MaybeUser> = user;
+        // definiteUser is guaranteed to be User
+    }
+}
+```
+
+## Creating Custom Utility Types
+
+From [Exercise 15](/exercises/advanced-type-mapping), you can create your own utility types:
+
+```typescript
+// Add a new property to a type
+type ObjectWithNewProp<T, K extends string, V> = T & { [NK in K]: V };
+
+// Usage
+type UserWithEmail = ObjectWithNewProp<User, 'email', string>;
+// {
+//     type: 'user';
+//     name: string;
+//     age: number;
+//     occupation: string;
+//     email: string;
+// }
+```
+
+## Practical Patterns
+
+### API Response Types
+
+From [Exercise 10](/exercises/generics):
+
+```typescript
+type ApiResponse<T> = 
+    | { status: 'success'; data: T }
+    | { status: 'error'; error: string };
+
+// Extract just the success data type
+type SuccessData<T> = Extract<ApiResponse<T>, { status: 'success' }>['data'];
+
+type UserData = SuccessData<User>;  // User
+```
+
+### Form Handling
+
+```typescript
+interface User {
+    id: string;
+    name: string;
+    email: string;
+    age: number;
+}
+
+// For creating new users (omit id, it's generated)
+type CreateUserInput = Omit<User, 'id'>;
+
+// For updating users (all fields optional except id)
+type UpdateUserInput = Pick<User, 'id'> & Partial<Omit<User, 'id'>>;
+
+function createUser(input: CreateUserInput): User {
+    return {
+        id: generateId(),
+        ...input
+    };
+}
+
+function updateUser(input: UpdateUserInput): User {
+    // Update only provided fields
+}
+```
+
+### Function Overloads with Utility Types
+
+From [Exercise 6](/exercises/generics):
+
+```typescript
+function filterPersons(
+    persons: Person[],
+    personType: 'user',
+    criteria: Partial<Omit<User, 'type'>>
+): User[];
+
+function filterPersons(
+    persons: Person[],
+    personType: 'admin',
+    criteria: Partial<Omit<Admin, 'type'>>
+): Admin[];
+
+function filterPersons(
+    persons: Person[],
+    personType: string,
+    criteria: Partial<Person>
+): Person[] {
+    return persons
+        .filter((person) => person.type === personType)
+        .filter((person) => {
+            let criteriaKeys = Object.keys(criteria) as (keyof Person)[];
+            return criteriaKeys.every((fieldName) => {
+                return person[fieldName] === criteria[fieldName];
+            });
+        });
+}
+
+// TypeScript knows the return type!
+const users = filterPersons(persons, 'user', { age: 23 });  // User[]
+const admins = filterPersons(persons, 'admin', { age: 23 });  // Admin[]
+```
+
+## Best Practices
+
+<Accordion title="Use utility types to avoid duplication">
+  Instead of defining similar types manually:
+
+  ```typescript
+  // Bad - Manual duplication
+  interface User {
+      name: string;
+      age: number;
+      email: string;
+  }
+
+  interface PartialUser {
+      name?: string;
+      age?: number;
+      email?: string;
+  }
+
+  // Good - Use utility types
+  interface User {
+      name: string;
+      age: number;
+      email: string;
+  }
+
+  type PartialUser = Partial<User>;
+  ```
+</Accordion>
+
+<Accordion title="Combine utility types for complex transformations">
+  Build complex types from simple utility types:
+
+  ```typescript
+  // Create, Update, and Display types from a single source
+  interface User {
+      id: string;
+      name: string;
+      email: string;
+      password: string;
+      createdAt: Date;
+  }
+
+  type CreateUser = Omit<User, 'id' | 'createdAt'>;
+  type UpdateUser = Partial<Omit<User, 'id' | 'createdAt'>> & Pick<User, 'id'>;
+  type UserDisplay = Omit<User, 'password'>;
+  ```
+</Accordion>
+
+<Accordion title="Create domain-specific utility types">
+  For repeated patterns, create reusable utility types:
+
+  ```typescript
+  // Generic "WithoutType" utility
+  type WithoutType<T> = Omit<T, 'type'>;
+
+  // Generic "Criteria" utility for filtering
+  type Criteria<T> = Partial<WithoutType<T>>;
+
+  // Usage
+  type UserCriteria = Criteria<User>;
+  type AdminCriteria = Criteria<Admin>;
+  ```
+</Accordion>
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Generics" icon="code" href="/concepts/generics-advanced">
+    Learn how utility types are built with generics
+  </Card>
+  <Card title="Conditional Types" icon="code-branch" href="/concepts/conditional-types">
+    Create your own utility types with conditional logic
+  </Card>
+  <Card title="Exercise 5" icon="dumbbell" href="/exercises/merged-types">
+    Practice using Partial and Omit utility types
+  </Card>
+  <Card title="Exercise 6" icon="dumbbell" href="/exercises/generics">
+    Combine utility types with function overloads
+  </Card>
+</CardGroup>
+
+## Further Reading
+
+- [TypeScript Handbook: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
+- [TypeScript Handbook: Mapped Types](https://www.typescriptlang.org/docs/handbook/2/mapped-types.html)

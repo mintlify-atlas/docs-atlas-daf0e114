@@ -1,0 +1,290 @@
+---
+title: Union Types (Exercise 4)
+description: Learn type predicates and discriminated unions for powerful type narrowing
+---
+
+## Exercise 4: Type Predicates
+
+### Scenario
+
+You've added a `type` field to distinguish Users from Admins and extracted type checking logic into separate functions. However, TypeScript doesn't understand that these functions narrow the type.
+
+### The Problem
+
+```typescript
+interface User {
+    type: 'user';
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+interface Admin {
+    type: 'admin';
+    name: string;
+    age: number;
+    role: string;
+}
+
+export type Person = User | Admin;
+
+export function isAdmin(person: Person) {
+    return person.type === 'admin';
+}
+
+export function isUser(person: Person) {
+    return person.type === 'user';
+}
+
+export function logPerson(person: Person) {
+    let additionalInformation: string = '';
+    if (isAdmin(person)) {
+        additionalInformation = person.role;  // ❌ Error: Property 'role' doesn't exist on Person
+    }
+    if (isUser(person)) {
+        additionalInformation = person.occupation;  // ❌ Error
+    }
+    console.log(`${person.name}, ${person.age}, ${additionalInformation}`);
+}
+```
+
+<Warning>
+  Even though `isAdmin` and `isUser` correctly identify the type, TypeScript doesn't know this without explicit type predicates.
+</Warning>
+
+### Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Discriminated Unions" icon="code-branch">
+    Union types with a common literal property (discriminant) for type narrowing
+  </Card>
+  
+  <Card title="Type Predicates" icon="check">
+    Functions that return `value is Type` to tell TypeScript about type narrowing
+  </Card>
+</CardGroup>
+
+### Understanding Type Predicates
+
+A type predicate is a special return type that tells TypeScript the function narrows the type:
+
+```typescript
+function isAdmin(person: Person): person is Admin {
+    //                            ^^^^^^^^^^^^^^^^ Type predicate
+    return person.type === 'admin';
+}
+```
+
+The syntax `person is Admin` means:
+- If the function returns `true`, TypeScript narrows `person` to `Admin`
+- If it returns `false`, TypeScript knows `person` is **not** `Admin`
+
+### Solution
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export function isAdmin(person: Person) {
+        return person.type === 'admin';
+    }
+    
+    export function isUser(person: Person) {
+        return person.type === 'user';
+    }
+    
+    export function logPerson(person: Person) {
+        let additionalInformation: string = '';
+        if (isAdmin(person)) {
+            additionalInformation = person.role;  // ❌ Error
+        }
+        if (isUser(person)) {
+            additionalInformation = person.occupation;  // ❌ Error
+        }
+        console.log(`${person.name}, ${person.age}, ${additionalInformation}`);
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    export function isAdmin(person: Person): person is Admin {
+        return person.type === 'admin';
+    }
+    
+    export function isUser(person: Person): person is User {
+        return person.type === 'user';
+    }
+    
+    export function logPerson(person: Person) {
+        let additionalInformation: string = '';
+        if (isAdmin(person)) {
+            additionalInformation = person.role;  // ✅ person is Admin
+        }
+        if (isUser(person)) {
+            additionalInformation = person.occupation;  // ✅ person is User
+        }
+        console.log(`${person.name}, ${person.age}, ${additionalInformation}`);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Discriminated Unions Explained
+
+This pattern uses a **discriminant** field (the `type` property) to distinguish union members:
+
+```typescript
+interface User {
+    type: 'user';  // Literal type - discriminant
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+interface Admin {
+    type: 'admin';  // Different literal - discriminant
+    name: string;
+    age: number;
+    role: string;
+}
+```
+
+<Accordion title="Why use literal types?">
+  Literal types like `'user'` and `'admin'` (instead of `string`) provide:
+  
+  1. **Exhaustiveness checking** - TypeScript ensures you handle all cases
+  2. **Autocomplete** - IDEs suggest the exact values
+  3. **Type narrowing** - Direct checks like `person.type === 'admin'` narrow the type
+</Accordion>
+
+### Using Type Predicates with Array Methods
+
+Type predicates shine when filtering arrays:
+
+```typescript
+const persons: Person[] = [
+    { type: 'user', name: 'Max Mustermann', age: 25, occupation: 'Chimney sweep' },
+    { type: 'admin', name: 'Jane Doe', age: 32, role: 'Administrator' },
+    { type: 'user', name: 'Kate Müller', age: 23, occupation: 'Astronaut' },
+    { type: 'admin', name: 'Bruce Willis', age: 64, role: 'World saver' }
+];
+
+console.log('Admins:');
+persons.filter(isAdmin).forEach(logPerson);
+//              ^^^^^^^ Returns Admin[], not Person[]
+
+console.log('Users:');
+persons.filter(isUser).forEach(logPerson);
+//             ^^^^^^ Returns User[], not Person[]
+```
+
+<Note>
+  Without type predicates, `persons.filter(isAdmin)` would still return `Person[]`, defeating the purpose of filtering.
+</Note>
+
+### How It Works
+
+<Steps>
+  <Step title="Define Type Predicate">
+    `function isAdmin(person: Person): person is Admin`
+  </Step>
+  
+  <Step title="Call in Condition">
+    `if (isAdmin(person)) { ... }`
+  </Step>
+  
+  <Step title="Type Narrowed">
+    Inside the block, TypeScript knows `person` is `Admin`
+  </Step>
+  
+  <Step title="Safe Property Access">
+    Now you can access `person.role` without errors
+  </Step>
+</Steps>
+
+### Type Predicates vs in Operator
+
+<CodeGroup>
+  ```typescript Type Predicate (Reusable)
+  function isAdmin(person: Person): person is Admin {
+      return person.type === 'admin';
+  }
+  
+  // Can be used anywhere
+  if (isAdmin(person)) { ... }
+  persons.filter(isAdmin)
+  ```
+  
+  ```typescript in Operator (Inline)
+  // Must write check inline
+  if ('role' in person) { ... }
+  
+  // Harder to reuse
+  persons.filter(p => 'role' in p)  // Doesn't narrow type in callback
+  ```
+</CodeGroup>
+
+<Tip>
+  Use type predicates when you need reusable type guards, especially with array methods like `filter()`, `find()`, or `every()`.
+</Tip>
+
+### Common Patterns
+
+<Accordion title="Exhaustiveness Checking">
+  TypeScript can verify you've handled all union cases:
+  
+  ```typescript
+  function handlePerson(person: Person) {
+      if (isAdmin(person)) {
+          return `Admin: ${person.role}`;
+      } else if (isUser(person)) {
+          return `User: ${person.occupation}`;
+      }
+      // If you add a new Person type, TypeScript will error here
+      const _exhaustive: never = person;
+      return _exhaustive;
+  }
+  ```
+</Accordion>
+
+### Real-World Benefits
+
+```typescript
+// Before: Unsafe, requires runtime checks
+function getRole(person: any) {
+    return person.role || person.occupation || 'Unknown';
+}
+
+// After: Type-safe, compile-time guarantees
+function getRole(person: Person): string {
+    if (isAdmin(person)) {
+        return person.role;
+    }
+    return person.occupation;
+}
+```
+
+## What You Learned
+
+<AccordionGroup>
+  <Accordion title="Type Predicates">
+    Functions with `parameter is Type` return type enable type narrowing
+  </Accordion>
+  
+  <Accordion title="Discriminated Unions">
+    Common literal properties make unions easy to narrow and type-safe
+  </Accordion>
+  
+  <Accordion title="Reusable Type Guards">
+    Type predicates work with array methods and can be called anywhere
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Continue to [Merged Types](/exercises/merged-types) to learn about utility types like `Partial` and `Omit` for flexible type composition.
+
+## Additional Resources
+
+- [TypeScript Handbook: Type Predicates](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates)
+- [TypeScript Handbook: Discriminated Unions](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions)

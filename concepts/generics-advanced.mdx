@@ -1,0 +1,499 @@
+---
+title: 'Advanced Generics'
+description: 'Master generic constraints, conditional types, mapped types, and type inference in TypeScript generics'
+---
+
+## What are Generics?
+
+Generics allow you to write reusable, type-safe code that works with multiple types while preserving type information. They're like function parameters, but for types.
+
+## Basic Generics
+
+From [Exercise 7](/exercises/generics), here's a simple generic function:
+
+```typescript
+function swap<T1, T2>(v1: T1, v2: T2): [T2, T1] {
+    return [v2, v1];
+}
+
+// TypeScript infers the types
+const [secondUser, firstAdmin] = swap(admins[0], users[1]);
+// secondUser is User
+// firstAdmin is Admin
+
+const [stringValue, numericValue] = swap(123, 'Hello World');
+// stringValue is string
+// numericValue is number
+```
+
+<Note>
+Without generics, you'd need to use `any` (losing type safety) or create separate functions for each type combination:
+
+```typescript
+// Without generics - loses type safety
+function swap(v1: any, v2: any): [any, any] {
+    return [v2, v1];
+}
+
+// Or create multiple functions - not scalable
+function swapUserAdmin(v1: User, v2: Admin): [Admin, User] { ... }
+function swapAdminUser(v1: Admin, v2: User): [User, Admin] { ... }
+// ... many more combinations
+```
+</Note>
+
+## Generic Constraints
+
+Constraints limit what types can be used with a generic:
+
+### Basic Constraints
+
+```typescript
+// Constrain to types with a 'length' property
+function logLength<T extends { length: number }>(item: T): void {
+    console.log(item.length);
+}
+
+logLength('hello');        // ✓ string has length
+logLength([1, 2, 3]);      // ✓ array has length
+logLength({ length: 5 });  // ✓ object has length
+// logLength(123);         // ✗ number doesn't have length
+```
+
+### Interface Constraints
+
+```typescript
+interface Person {
+    name: string;
+    age: number;
+}
+
+// Only accept types that extend Person
+function greet<T extends Person>(person: T): string {
+    return `Hello, ${person.name}!`;
+}
+
+interface User extends Person {
+    occupation: string;
+}
+
+const user: User = { name: 'John', age: 30, occupation: 'Developer' };
+greet(user);  // ✓ User extends Person
+
+// greet({ name: 'John' });  // ✗ Missing 'age' property
+```
+
+### Multiple Constraints
+
+```typescript
+interface Nameable {
+    name: string;
+}
+
+interface Ageable {
+    age: number;
+}
+
+// T must satisfy both constraints
+function describe<T extends Nameable & Ageable>(person: T): string {
+    return `${person.name} is ${person.age} years old`;
+}
+```
+
+<Tip>
+Constraints help you:
+- Access specific properties safely
+- Ensure types have required structure
+- Create more specific generic functions
+- Provide better IDE autocomplete
+</Tip>
+
+## Generic Classes
+
+From [Exercise 15](/exercises/advanced-type-mapping), here's a generic class:
+
+```typescript
+type ObjectWithNewProp<T, K extends string, V> = T & { [NK in K]: V };
+
+class ObjectManipulator<T> {
+    constructor(protected obj: T) {}
+
+    public set<K extends string, V>(
+        key: K,
+        value: V
+    ): ObjectManipulator<ObjectWithNewProp<T, K, V>> {
+        return new ObjectManipulator({ ...this.obj, [key]: value } as ObjectWithNewProp<T, K, V>);
+    }
+
+    public get<K extends keyof T>(key: K): T[K] {
+        return this.obj[key];
+    }
+
+    public delete<K extends keyof T>(key: K): ObjectManipulator<Omit<T, K>> {
+        const newObj = { ...this.obj };
+        delete newObj[key];
+        return new ObjectManipulator(newObj);
+    }
+
+    public getObject(): T {
+        return this.obj;
+    }
+}
+
+// Usage - types are tracked through transformations
+const obj = new ObjectManipulator({});
+const withName = obj.set('name', 'John');         // ObjectManipulator<{ name: string }>
+const withAge = withName.set('age', 30);          // ObjectManipulator<{ name: string; age: number }>
+const result = withAge.getObject();               // { name: string; age: number }
+```
+
+<Accordion title="How does this work?">
+  Each method returns a new type that reflects the transformation:
+
+  - `set()` adds a property to the type
+  - `delete()` removes a property using `Omit`
+  - `get()` uses `keyof` to ensure the key exists
+  
+  TypeScript tracks these changes through the chain of operations, maintaining perfect type safety.
+</Accordion>
+
+## Generic Functions with Inference
+
+From [Exercise 10](/exercises/generics), here's advanced type inference:
+
+```typescript
+type ApiResponse<T> = 
+    | { status: 'success'; data: T }
+    | { status: 'error'; error: string };
+
+type CallbackBasedAsyncFunction<T> = (
+    callback: (response: ApiResponse<T>) => void
+) => void;
+
+type PromiseBasedAsyncFunction<T> = () => Promise<T>;
+
+// TypeScript infers T from the input function
+function promisify<T>(
+    fn: CallbackBasedAsyncFunction<T>
+): PromiseBasedAsyncFunction<T> {
+    return () => new Promise<T>((resolve, reject) => {
+        fn((response) => {
+            if (response.status === 'success') {
+                resolve(response.data);
+            } else {
+                reject(new Error(response.error));
+            }
+        });
+    });
+}
+
+// Usage - type is inferred automatically
+const oldRequestUsers = (callback: (response: ApiResponse<User[]>) => void) => {
+    // ...
+};
+
+const newRequestUsers = promisify(oldRequestUsers);
+// Type is inferred as: () => Promise<User[]>
+```
+
+### Type Inference from Object Structure
+
+```typescript
+type SourceObject<T> = { [K in keyof T]: CallbackBasedAsyncFunction<T[K]> };
+type PromisifiedObject<T> = { [K in keyof T]: PromiseBasedAsyncFunction<T[K]> };
+
+function promisifyAll<T extends { [key: string]: any }>(
+    obj: SourceObject<T>
+): PromisifiedObject<T> {
+    const result: Partial<PromisifiedObject<T>> = {};
+    for (const key of Object.keys(obj) as (keyof T)[]) {
+        result[key] = promisify(obj[key]);
+    }
+    return result as PromisifiedObject<T>;
+}
+
+// Usage - entire object structure is inferred
+const oldApi = {
+    requestUsers: (callback: (response: ApiResponse<User[]>) => void) => {},
+    requestAdmins: (callback: (response: ApiResponse<Admin[]>) => void) => {},
+};
+
+const api = promisifyAll(oldApi);
+// api.requestUsers is () => Promise<User[]>
+// api.requestAdmins is () => Promise<Admin[]>
+```
+
+<Warning>
+Type inference is powerful but can be complex. Add explicit type annotations when:
+- The inferred type is too broad
+- You want to catch errors earlier
+- The code is hard to understand
+- You're creating a public API
+</Warning>
+
+## Mapped Types
+
+Mapped types transform each property in a type:
+
+```typescript
+// Make all properties optional
+type Partial<T> = {
+    [P in keyof T]?: T[P];
+};
+
+// Make all properties readonly
+type Readonly<T> = {
+    readonly [P in keyof T]: T[P];
+};
+
+// Pick specific properties
+type Pick<T, K extends keyof T> = {
+    [P in K]: T[P];
+};
+```
+
+### Custom Mapped Types
+
+```typescript
+// Add 'get' and 'set' methods for each property
+type Accessors<T> = {
+    [K in keyof T as `get${Capitalize<string & K>}`]: () => T[K];
+} & {
+    [K in keyof T as `set${Capitalize<string & K>}`]: (value: T[K]) => void;
+};
+
+interface User {
+    name: string;
+    age: number;
+}
+
+type UserAccessors = Accessors<User>;
+// {
+//     getName: () => string;
+//     setName: (value: string) => void;
+//     getAge: () => number;
+//     setAge: (value: number) => void;
+// }
+```
+
+### Key Remapping
+
+```typescript
+// Remove properties with specific types
+type RemoveKind<T> = {
+    [K in keyof T as T[K] extends string ? K : never]: T[K];
+};
+
+interface Mixed {
+    name: string;
+    age: number;
+    email: string;
+}
+
+type StringPropsOnly = RemoveKind<Mixed>;
+// {
+//     name: string;
+//     email: string;
+// }
+```
+
+## Conditional Types in Generics
+
+Conditional types allow logic at the type level:
+
+```typescript
+// Extract array element type
+type Unpack<T> = T extends Array<infer U> ? U : T;
+
+type StringArray = Unpack<string[]>;  // string
+type NumberType = Unpack<number>;     // number
+
+// From Exercise 10 - Extract data from API response
+type ExtractData<T> = T extends { data: infer D } ? D : never;
+
+type ResponseData = ExtractData<{ status: 'success'; data: User[] }>;  // User[]
+```
+
+<Tabs>
+  <Tab title="Simple Conditional">
+    ```typescript
+    type IsString<T> = T extends string ? true : false;
+
+    type A = IsString<string>;   // true
+    type B = IsString<number>;   // false
+    ```
+  </Tab>
+  <Tab title="With Infer">
+    ```typescript
+    type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+
+    type Result = ReturnType<() => User>;  // User
+    ```
+  </Tab>
+</Tabs>
+
+## Generic Constraints with keyof
+
+The `keyof` operator creates a union of an object's keys:
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+type UserKeys = keyof User;  // 'name' | 'age' | 'occupation'
+
+// Access object properties safely
+function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
+    return obj[key];
+}
+
+const user: User = { name: 'John', age: 30, occupation: 'Developer' };
+const name = getProperty(user, 'name');        // string
+const age = getProperty(user, 'age');          // number
+// const invalid = getProperty(user, 'email'); // ✗ Error: 'email' not in User
+```
+
+From [Exercise 14](/exercises/advanced-type-mapping), here's a practical pattern:
+
+```typescript
+interface PropFunc {
+    (): PropFunc;
+    <K extends string>(propName: K): PropNameFunc<K>;
+    <O, K extends keyof O>(propName: K, obj: O): O[K];
+}
+
+const prop: PropFunc = /* ... */;
+
+// Curry-style property access
+const getName = prop('name');
+const userName = getName({ name: 'John', age: 30 });  // string
+```
+
+## Variadic Tuple Types
+
+Handle variable-length tuples with generics:
+
+```typescript
+// From Exercise 14 - pipe function with type checking
+type F<A extends unknown[], R> = (...args: A) => R;
+type TR<I, O> = (arg: I) => O;
+
+interface PipeFunc {
+    (): PipeFunc;
+    <A1 extends unknown[], R1>(f: F<A1, R1>): (...args: A1) => R1;
+    <A1 extends unknown[], R1, R2>(
+        f: F<A1, R1>,
+        tr1: TR<R1, R2>
+    ): (...args: A1) => R2;
+    <A1 extends unknown[], R1, R2, R3>(
+        f: F<A1, R1>,
+        tr1: TR<R1, R2>,
+        tr2: TR<R2, R3>
+    ): (...args: A1) => R3;
+}
+
+// Usage - types are checked through the chain!
+const transform = pipe(
+    (x: number) => x * 2,           // number => number
+    (x: number) => x.toString(),    // number => string
+    (x: string) => x.length         // string => number
+);
+
+const result = transform(5);  // number (10 => "10" => 2)
+```
+
+## Best Practices
+
+<Accordion title="Keep generic type parameters simple">
+  Use short, descriptive names:
+
+  ```typescript
+  // Good
+  function map<T, U>(array: T[], fn: (item: T) => U): U[] { ... }
+
+  // Less clear
+  function map<InputType, OutputType>(
+      array: InputType[],
+      fn: (item: InputType) => OutputType
+  ): OutputType[] { ... }
+
+  // Convention: T, U, V for generic types
+  // K for keys, V for values
+  // E for element types
+  // R for return types
+  ```
+</Accordion>
+
+<Accordion title="Use constraints to enable type-specific operations">
+  Add constraints when you need to access properties or methods:
+
+  ```typescript
+  // Good - constraint allows accessing name
+  function greet<T extends { name: string }>(person: T) {
+      return `Hello, ${person.name}`;
+  }
+
+  // Bad - can't access name without constraint
+  function greet<T>(person: T) {
+      return `Hello, ${person.name}`;  // ✗ Error
+  }
+  ```
+</Accordion>
+
+<Accordion title="Leverage type inference when possible">
+  Let TypeScript infer types instead of explicitly specifying them:
+
+  ```typescript
+  function swap<T1, T2>(v1: T1, v2: T2): [T2, T1] {
+      return [v2, v1];
+  }
+
+  // Good - inferred
+  const result = swap(1, 'hello');
+
+  // Unnecessary - explicit
+  const result = swap<number, string>(1, 'hello');
+  ```
+</Accordion>
+
+<Accordion title="Use generic defaults for common cases">
+  Provide default types for frequently used generics:
+
+  ```typescript
+  interface ApiResponse<T = unknown> {
+      status: number;
+      data: T;
+  }
+
+  // Can use without specifying T
+  const response: ApiResponse = { status: 200, data: {} };
+
+  // Or specify T when needed
+  const userResponse: ApiResponse<User> = { status: 200, data: user };
+  ```
+</Accordion>
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Utility Types" icon="wrench" href="/concepts/utility-types">
+    See how generics power built-in utility types
+  </Card>
+  <Card title="Conditional Types" icon="code-branch" href="/concepts/conditional-types">
+    Master conditional logic with generics
+  </Card>
+  <Card title="Exercise 7" icon="dumbbell" href="/exercises/generics">
+    Practice basic generics with a swap function
+  </Card>
+  <Card title="Exercise 10" icon="dumbbell" href="/exercises/generics">
+    Build a promisify function with advanced generics
+  </Card>
+</CardGroup>
+
+## Further Reading
+
+- [TypeScript Handbook: Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html)
+- [TypeScript Handbook: Mapped Types](https://www.typescriptlang.org/docs/handbook/2/mapped-types.html)

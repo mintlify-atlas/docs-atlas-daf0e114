@@ -1,0 +1,439 @@
+---
+title: 'Type Guards'
+description: 'Learn type narrowing, type predicates, discriminated unions, and built-in type guards in TypeScript'
+---
+
+## What are Type Guards?
+
+Type guards are TypeScript expressions that perform runtime checks to guarantee a type in a specific scope. They allow you to narrow down the type of a variable from a broader type to a more specific one.
+
+## Built-in Type Guards
+
+### typeof Operator
+
+The `typeof` operator checks for primitive types:
+
+```typescript
+function processValue(value: string | number) {
+    if (typeof value === 'string') {
+        // TypeScript knows value is string here
+        return value.toUpperCase();
+    } else {
+        // TypeScript knows value is number here
+        return value.toFixed(2);
+    }
+}
+```
+
+<Note>
+The `typeof` operator works for: `'string'`, `'number'`, `'boolean'`, `'symbol'`, `'undefined'`, `'object'`, and `'function'`.
+</Note>
+
+### instanceof Operator
+
+The `instanceof` operator checks if an object is an instance of a class:
+
+```typescript
+class User {
+    name: string;
+    constructor(name: string) {
+        this.name = name;
+    }
+}
+
+class Admin extends User {
+    role: string;
+    constructor(name: string, role: string) {
+        super(name);
+        this.role = role;
+    }
+}
+
+function greet(person: User | Admin) {
+    if (person instanceof Admin) {
+        console.log(`Admin ${person.name} - ${person.role}`);
+    } else {
+        console.log(`User ${person.name}`);
+    }
+}
+```
+
+### in Operator
+
+From [Exercise 3](/exercises/refining-types), the `in` operator checks if a property exists in an object:
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+interface Admin {
+    name: string;
+    age: number;
+    role: string;
+}
+
+type Person = User | Admin;
+
+function logPerson(person: Person) {
+    let additionalInformation: string;
+    if ('role' in person) {
+        // TypeScript knows person is Admin here
+        additionalInformation = person.role;
+    } else {
+        // TypeScript knows person is User here
+        additionalInformation = person.occupation;
+    }
+    console.log(` - ${person.name}, ${person.age}, ${additionalInformation}`);
+}
+```
+
+<Tip>
+The `in` operator is perfect for discriminating between types that have different property names. It's safer than checking if a property is truthy because it works even if the property value is `undefined` or `false`.
+</Tip>
+
+## Type Predicates
+
+Type predicates are custom type guards that return a type predicate (`parameterName is Type`) instead of a boolean.
+
+### Basic Type Predicate
+
+From [Exercise 4](/exercises/union-types), here's how to create a type predicate:
+
+```typescript
+interface User {
+    type: 'user';
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+interface Admin {
+    type: 'admin';
+    name: string;
+    age: number;
+    role: string;
+}
+
+type Person = User | Admin;
+
+// Type predicate function
+function isAdmin(person: Person): person is Admin {
+    return person.type === 'admin';
+}
+
+function isUser(person: Person): person is User {
+    return person.type === 'user';
+}
+
+// Usage
+function logPerson(person: Person) {
+    let additionalInformation = '';
+    if (isAdmin(person)) {
+        // TypeScript knows person is Admin
+        additionalInformation = person.role;
+    }
+    if (isUser(person)) {
+        // TypeScript knows person is User
+        additionalInformation = person.occupation;
+    }
+    console.log(` - ${person.name}, ${person.age}, ${additionalInformation}`);
+}
+```
+
+<Tabs>
+  <Tab title="With Type Predicate">
+    ```typescript
+    function isAdmin(person: Person): person is Admin {
+        return person.type === 'admin';
+    }
+
+    if (isAdmin(person)) {
+        // person is narrowed to Admin
+        console.log(person.role); // ✓ Works!
+    }
+    ```
+  </Tab>
+  <Tab title="Without Type Predicate">
+    ```typescript
+    function isAdmin(person: Person): boolean {
+        return person.type === 'admin';
+    }
+
+    if (isAdmin(person)) {
+        // person is still Person
+        console.log(person.role); // ✗ Error: Property 'role' does not exist
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Type Predicates in Array Methods
+
+From [Exercise 4](/exercises/union-types), type predicates work seamlessly with array methods:
+
+```typescript
+const persons: Person[] = [
+    { type: 'user', name: 'Max Mustermann', age: 25, occupation: 'Chimney sweep' },
+    { type: 'admin', name: 'Jane Doe', age: 32, role: 'Administrator' },
+    { type: 'user', name: 'Kate Müller', age: 23, occupation: 'Astronaut' },
+];
+
+// Filter returns User[] automatically
+const users = persons.filter(isUser);
+users.forEach(user => {
+    console.log(user.occupation); // ✓ TypeScript knows these are Users
+});
+
+// Filter returns Admin[] automatically
+const admins = persons.filter(isAdmin);
+admins.forEach(admin => {
+    console.log(admin.role); // ✓ TypeScript knows these are Admins
+});
+```
+
+<Warning>
+Type predicates must be implemented correctly! If the runtime check doesn't match the type assertion, you'll have type safety issues:
+
+```typescript
+// BAD: Incorrect type predicate
+function isAdmin(person: Person): person is Admin {
+    return true; // Always returns true, but claims to check if Admin
+}
+
+// This will cause runtime errors!
+```
+</Warning>
+
+## Discriminated Unions
+
+Discriminated unions (also called tagged unions) use a common literal property to distinguish between types.
+
+### Creating a Discriminated Union
+
+```typescript
+interface User {
+    type: 'user';  // Discriminant property
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+interface Admin {
+    type: 'admin';  // Discriminant property
+    name: string;
+    age: number;
+    role: string;
+}
+
+type Person = User | Admin;
+```
+
+### Exhaustive Checking
+
+TypeScript can verify you've handled all cases:
+
+```typescript
+function assertNever(value: never): never {
+    throw new Error(`Unexpected value: ${value}`);
+}
+
+function getPerson Info(person: Person): string {
+    switch (person.type) {
+        case 'user':
+            return person.occupation;
+        case 'admin':
+            return person.role;
+        default:
+            // If we add a new Person type and forget to handle it,
+            // TypeScript will error here
+            return assertNever(person);
+    }
+}
+```
+
+<Accordion title="Why use exhaustive checking?">
+  Exhaustive checking ensures that when you add new variants to a discriminated union, TypeScript will remind you to handle them everywhere. This prevents bugs when your types evolve.
+
+  ```typescript
+  // If we add PowerUser:
+  type Person = User | Admin | PowerUser;
+
+  // TypeScript will error in getPerson Info because we didn't handle PowerUser
+  ```
+</Accordion>
+
+## Advanced Type Narrowing
+
+### Truthiness Narrowing
+
+TypeScript narrows types based on truthiness checks:
+
+```typescript
+function printLength(value: string | null | undefined) {
+    if (value) {
+        // TypeScript knows value is string here
+        console.log(value.length);
+    } else {
+        // TypeScript knows value is null or undefined
+        console.log('No value');
+    }
+}
+```
+
+### Equality Narrowing
+
+Comparing values can narrow types:
+
+```typescript
+function compare(x: string | number, y: string | boolean) {
+    if (x === y) {
+        // TypeScript knows both must be string
+        x.toUpperCase();
+        y.toUpperCase();
+    }
+}
+```
+
+### Control Flow Analysis
+
+TypeScript tracks type narrowing through control flow:
+
+```typescript
+function processValue(value: string | number | null) {
+    if (value === null) {
+        return;
+    }
+    
+    // TypeScript knows value is string | number here
+    
+    if (typeof value === 'string') {
+        console.log(value.toUpperCase());
+        return;
+    }
+    
+    // TypeScript knows value must be number here
+    console.log(value.toFixed(2));
+}
+```
+
+## Practical Patterns
+
+### API Response Handling
+
+```typescript
+interface SuccessResponse<T> {
+    status: 'success';
+    data: T;
+}
+
+interface ErrorResponse {
+    status: 'error';
+    error: string;
+}
+
+type ApiResponse<T> = SuccessResponse<T> | ErrorResponse;
+
+function handleResponse<T>(response: ApiResponse<T>) {
+    if (response.status === 'success') {
+        // TypeScript knows response has data property
+        console.log(response.data);
+    } else {
+        // TypeScript knows response has error property
+        console.error(response.error);
+    }
+}
+```
+
+### Filtering Patterns
+
+From [Exercise 5](/exercises/merged-types), combining type guards with utility types:
+
+```typescript
+function filterUsers(
+    persons: Person[],
+    criteria: Partial<Omit<User, 'type'>>
+): User[] {
+    return persons.filter(isUser).filter((user) => {
+        const criteriaKeys = Object.keys(criteria) as (keyof User)[];
+        return criteriaKeys.every((fieldName) => {
+            return user[fieldName] === criteria[fieldName];
+        });
+    });
+}
+
+// Usage
+const youngUsers = filterUsers(persons, { age: 23 });
+```
+
+## Best Practices
+
+<Accordion title="Prefer discriminated unions over type predicates when possible">
+  Discriminated unions are more maintainable and less error-prone:
+
+  ```typescript
+  // Good - Discriminated union
+  type Shape = 
+    | { kind: 'circle'; radius: number }
+    | { kind: 'square'; size: number };
+
+  function getArea(shape: Shape) {
+      switch (shape.kind) {
+          case 'circle':
+              return Math.PI * shape.radius ** 2;
+          case 'square':
+              return shape.size ** 2;
+      }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Use type predicates for complex runtime checks">
+  When the check is more complex than a simple property comparison:
+
+  ```typescript
+  function isValidEmail(value: string): value is `${string}@${string}.${string}` {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+  ```
+</Accordion>
+
+<Accordion title="Always implement type predicates correctly">
+  The runtime check must match the type assertion:
+
+  ```typescript
+  // Good
+  function isAdmin(person: Person): person is Admin {
+      return person.type === 'admin';
+  }
+
+  // Bad - Implementation doesn't match assertion
+  function isAdmin(person: Person): person is Admin {
+      return person.name.startsWith('Admin'); // Wrong!
+  }
+  ```
+</Accordion>
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Interfaces" icon="brackets-curly" href="/concepts/interfaces">
+    Learn how to define types that work with type guards
+  </Card>
+  <Card title="Conditional Types" icon="code-branch" href="/concepts/conditional-types">
+    Use conditional logic at the type level
+  </Card>
+  <Card title="Exercise 3" icon="dumbbell" href="/exercises/refining-types">
+    Practice using the 'in' operator for type narrowing
+  </Card>
+  <Card title="Exercise 4" icon="dumbbell" href="/exercises/union-types">
+    Learn to implement type predicates
+  </Card>
+</CardGroup>
+
+## Further Reading
+
+- [TypeScript Handbook: Narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)
+- [TypeScript Handbook: Type Predicates](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates)

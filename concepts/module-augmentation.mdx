@@ -1,0 +1,532 @@
+---
+title: 'Module Augmentation'
+description: 'Learn to extend third-party types, create ambient declarations, and augment module definitions in TypeScript'
+---
+
+## What is Module Augmentation?
+
+Module augmentation allows you to extend existing modules by adding new declarations. This is essential when working with third-party libraries that have incomplete or missing type definitions.
+
+<Note>
+Module augmentation is TypeScript's way of saying "I want to add these types to an existing module." It's particularly useful for:
+- Extending third-party library types
+- Adding custom methods to built-in objects
+- Fixing incomplete type definitions
+- Declaring global variables
+</Note>
+
+## Basic Module Augmentation
+
+From [Exercise 13](/exercises/module-augmentation), here's how to augment a module:
+
+```typescript
+// date-wizard library has incomplete types
+import 'date-wizard';
+
+// Augment the module to add missing declarations
+declare module 'date-wizard' {
+    // Add missing function export
+    const pad: (num: number) => string;
+
+    // Extend incomplete interface
+    interface DateDetails {
+        hours: number;
+        minutes: number;
+        seconds: number;
+    }
+}
+```
+
+### Original Library Code
+
+The original `date-wizard` module had incomplete types:
+
+```typescript
+// node_modules/date-wizard/index.d.ts (incomplete)
+declare module 'date-wizard' {
+    interface DateDetails {
+        year: number;
+        month: number;
+        date: number;
+        // Missing: hours, minutes, seconds
+    }
+
+    function dateWizard(date: Date, format: string): string;
+    function dateDetails(date: Date): DateDetails;
+
+    // Missing: pad function export
+}
+```
+
+### After Augmentation
+
+```typescript
+// Now we can use the complete types
+import * as dateWizard from 'date-wizard';
+
+const registered = new Date('2016-06-01T16:23:13');
+
+// Use augmented interface with time fields
+const details = dateWizard.dateDetails(registered);
+console.log(details.hours);    // ✓ TypeScript knows about hours now
+console.log(details.minutes);  // ✓ TypeScript knows about minutes now
+console.log(details.seconds);  // ✓ TypeScript knows about seconds now
+
+// Use augmented function export
+const padded = dateWizard.pad(5);  // ✓ TypeScript knows about pad now
+console.log(padded);  // "05"
+```
+
+<Tip>
+**When to use module augmentation:**
+- Third-party library has incomplete types
+- You're using JavaScript libraries with `@types` packages
+- You need to add custom properties to library types
+- You're waiting for official type updates
+</Tip>
+
+## Augmenting Global Scope
+
+You can also augment the global namespace:
+
+```typescript
+// Augment the global scope
+declare global {
+    interface Window {
+        myCustomProperty: string;
+        myCustomFunction(): void;
+    }
+
+    var MY_GLOBAL_CONSTANT: number;
+}
+
+// Now these are available globally
+window.myCustomProperty = 'Hello';
+window.myCustomFunction();
+console.log(MY_GLOBAL_CONSTANT);
+```
+
+### Example: Extending Node.js Process
+
+```typescript
+declare global {
+    namespace NodeJS {
+        interface ProcessEnv {
+            DATABASE_URL: string;
+            API_KEY: string;
+            NODE_ENV: 'development' | 'production' | 'test';
+        }
+    }
+}
+
+// Now process.env is properly typed
+const dbUrl: string = process.env.DATABASE_URL;
+const nodeEnv: 'development' | 'production' | 'test' = process.env.NODE_ENV;
+```
+
+<Warning>
+Be careful with global augmentation! It affects the entire project and can cause conflicts. Use it sparingly and document your changes.
+</Warning>
+
+## Ambient Declarations
+
+Ambient declarations describe the shape of code that exists elsewhere (usually in JavaScript).
+
+### Declaring Modules
+
+When a library has no types at all:
+
+```typescript
+// declarations.d.ts
+declare module 'some-untyped-library' {
+    export function doSomething(value: string): number;
+    export interface Config {
+        timeout: number;
+        retries: number;
+    }
+}
+```
+
+Now you can import and use it with types:
+
+```typescript
+import { doSomething, Config } from 'some-untyped-library';
+
+const result = doSomething('test');  // number
+const config: Config = { timeout: 1000, retries: 3 };
+```
+
+### Declaring Global Variables
+
+```typescript
+// For variables injected by build tools or script tags
+declare const API_URL: string;
+declare const VERSION: string;
+
+// Usage
+console.log(`API: ${API_URL}, Version: ${VERSION}`);
+```
+
+### Wildcard Module Declarations
+
+For non-JavaScript files:
+
+```typescript
+// Handle CSS modules
+declare module '*.css' {
+    const styles: { [key: string]: string };
+    export default styles;
+}
+
+// Handle image imports
+declare module '*.png' {
+    const content: string;
+    export default content;
+}
+
+// Handle JSON imports
+declare module '*.json' {
+    const value: any;
+    export default value;
+}
+
+// Now you can import these files
+import styles from './App.css';
+import logo from './logo.png';
+import config from './config.json';
+```
+
+<Accordion title="Why are these called 'ambient' declarations?">
+  They're called "ambient" because they describe the environment or context in which your code runs, rather than being the actual implementation. They tell TypeScript "trust me, this exists at runtime."
+</Accordion>
+
+## Practical Patterns
+
+### Extending Third-Party Libraries
+
+From [Exercise 13](/exercises/module-augmentation), here's a complete example:
+
+```typescript
+// File: module-augmentations/date-wizard/index.ts
+import 'date-wizard';
+
+declare module 'date-wizard' {
+    // Add missing export
+    const pad: (num: number) => string;
+
+    // Extend existing interface
+    interface DateDetails {
+        hours: number;
+        minutes: number;
+        seconds: number;
+    }
+}
+
+// File: main.ts
+import * as dateWizard from 'date-wizard';
+import './module-augmentations/date-wizard';
+
+interface Person {
+    name: string;
+    age: number;
+    registered: Date;
+}
+
+const persons: Person[] = [
+    {
+        name: 'Max Mustermann',
+        age: 25,
+        registered: new Date('2016-02-15T09:25:13')
+    },
+    {
+        name: 'Kate Müller',
+        age: 23,
+        registered: new Date('2016-03-23T12:47:03')
+    },
+];
+
+function logPerson(person: Person, index: number) {
+    // Use augmented types
+    const registeredAt = dateWizard(person.registered, '{date}.{month}.{year} {hours}:{minutes}');
+    const num = `#${dateWizard.pad(index + 1)}`;
+    console.log(`${num}: ${person.name}, ${person.age}, ${registeredAt}`);
+}
+
+console.log('Early birds:');
+persons
+    .filter((person) => dateWizard.dateDetails(person.registered).hours < 10)
+    .forEach(logPerson);
+```
+
+### Creating Type Definition Files
+
+For larger augmentations, use separate `.d.ts` files:
+
+```typescript
+// types/express/index.d.ts
+import { User } from '../../models/User';
+
+declare global {
+    namespace Express {
+        interface Request {
+            user?: User;
+            sessionId?: string;
+        }
+    }
+}
+
+// Now available in all Express routes
+import { Request, Response } from 'express';
+
+app.get('/profile', (req: Request, res: Response) => {
+    if (req.user) {
+        res.json(req.user);  // ✓ TypeScript knows about req.user
+    }
+});
+```
+
+### Augmenting Built-in Types
+
+```typescript
+// Extend Array with custom methods
+declare global {
+    interface Array<T> {
+        first(): T | undefined;
+        last(): T | undefined;
+    }
+}
+
+// Implementation (in a separate file)
+Array.prototype.first = function() {
+    return this[0];
+};
+
+Array.prototype.last = function() {
+    return this[this.length - 1];
+};
+
+// Usage
+const numbers = [1, 2, 3, 4, 5];
+console.log(numbers.first());  // 1
+console.log(numbers.last());   // 5
+```
+
+<Warning>
+Extending built-in prototypes is generally discouraged because:
+- It can conflict with future JavaScript features
+- It affects all code in your project
+- It makes code harder to understand
+- It can cause issues in third-party libraries
+
+Use utility functions instead when possible.
+</Warning>
+
+## Declaration Merging
+
+Interfaces with the same name automatically merge:
+
+```typescript
+// First declaration
+interface User {
+    name: string;
+    age: number;
+}
+
+// Second declaration - merges with the first
+interface User {
+    email: string;
+}
+
+// Merged result
+const user: User = {
+    name: 'John',
+    age: 30,
+    email: 'john@example.com'  // All properties required
+};
+```
+
+<Tabs>
+  <Tab title="Interfaces Merge">
+    ```typescript
+    interface User {
+        name: string;
+    }
+
+    interface User {
+        age: number;
+    }
+
+    // Merged: { name: string; age: number }
+    ```
+  </Tab>
+  <Tab title="Types Don't Merge">
+    ```typescript
+    type User = {
+        name: string;
+    };
+
+    type User = {  // ✗ Error: Duplicate identifier
+        age: number;
+    };
+    ```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<Accordion title="Keep augmentations in dedicated files">
+  Organize module augmentations in a dedicated directory:
+
+  ```
+  src/
+  ├── module-augmentations/
+  │   ├── date-wizard/
+  │   │   └── index.ts
+  │   ├── express/
+  │   │   └── index.d.ts
+  │   └── global/
+  │       └── index.d.ts
+  └── index.ts
+  ```
+</Accordion>
+
+<Accordion title="Document why augmentation is needed">
+  Add comments explaining the augmentation:
+
+  ```typescript
+  /**
+   * Augment date-wizard module to add missing type definitions.
+   * 
+   * The library exports a `pad` function but doesn't include it in types.
+   * DateDetails interface is missing time-related fields that exist at runtime.
+   * 
+   * @see https://github.com/library/date-wizard/issues/123
+   */
+  declare module 'date-wizard' {
+      const pad: (num: number) => string;
+      
+      interface DateDetails {
+          hours: number;
+          minutes: number;
+          seconds: number;
+      }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Consider contributing upstream">
+  If you're augmenting a popular library:
+
+  1. Check if types already exist in DefinitelyTyped
+  2. Consider submitting a PR to the library
+  3. Consider submitting to `@types` packages
+  4. Document the augmentation for your team
+
+  Temporary augmentation is fine, but contributing helps everyone!
+</Accordion>
+
+<Accordion title="Use import type for type-only imports">
+  When importing only for types, use `import type`:
+
+  ```typescript
+  import type { User } from './models';
+
+  declare module 'express' {
+      interface Request {
+          user?: User;
+      }
+  }
+  ```
+
+  This ensures the import is removed during compilation.
+</Accordion>
+
+## Common Patterns
+
+### Pattern 1: Plugin System Types
+
+```typescript
+// core.ts
+export interface PluginAPI {
+    version: string;
+}
+
+// plugin-system.d.ts
+import { PluginAPI } from './core';
+
+declare module './core' {
+    interface PluginAPI {
+        // Plugins can extend this
+        registerPlugin(name: string, plugin: unknown): void;
+    }
+}
+
+// my-plugin.ts
+import { PluginAPI } from './core';
+
+declare module './core' {
+    interface PluginAPI {
+        myPluginMethod(): void;
+    }
+}
+```
+
+### Pattern 2: Framework Extensions
+
+```typescript
+// Extend Vue component options
+declare module 'vue/types/options' {
+    interface ComponentOptions<V> {
+        myCustomOption?: string;
+    }
+}
+
+// Extend Next.js page props
+declare module 'next' {
+    interface NextPageContext {
+        customProperty: string;
+    }
+}
+```
+
+### Pattern 3: Environment Variables
+
+```typescript
+declare global {
+    namespace NodeJS {
+        interface ProcessEnv {
+            NODE_ENV: 'development' | 'production' | 'test';
+            DATABASE_URL: string;
+            API_KEY: string;
+            PORT: string;
+        }
+    }
+}
+
+// Now fully typed
+const dbUrl = process.env.DATABASE_URL;  // string
+const port = parseInt(process.env.PORT); // string -> number
+```
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Interfaces" icon="brackets-curly" href="/concepts/interfaces">
+    Understand interface declaration merging
+  </Card>
+  <Card title="Type Guards" icon="shield-check" href="/concepts/type-guards">
+    Use type guards with augmented types
+  </Card>
+  <Card title="Exercise 13" icon="dumbbell" href="/exercises/module-augmentation">
+    Practice module augmentation with date-wizard
+  </Card>
+  <Card title="Generics" icon="code" href="/concepts/generics-advanced">
+    Combine generics with module augmentation
+  </Card>
+</CardGroup>
+
+## Further Reading
+
+- [TypeScript Handbook: Module Augmentation](https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation)
+- [TypeScript Handbook: Ambient Modules](https://www.typescriptlang.org/docs/handbook/modules.html#ambient-modules)
+- [TypeScript Handbook: Declaration Merging](https://www.typescriptlang.org/docs/handbook/declaration-merging.html)

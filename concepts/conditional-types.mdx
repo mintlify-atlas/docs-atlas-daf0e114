@@ -1,0 +1,554 @@
+---
+title: 'Conditional Types'
+description: 'Master conditional type syntax, distributive types, the infer keyword, and advanced type-level programming patterns in TypeScript'
+---
+
+## What are Conditional Types?
+
+Conditional types select one of two possible types based on a condition expressed as a type relationship test. They follow the pattern `T extends U ? X : Y` and enable powerful type-level programming.
+
+```typescript
+type IsString<T> = T extends string ? true : false;
+
+type A = IsString<string>;  // true
+type B = IsString<number>;  // false
+```
+
+<Note>
+Think of conditional types as the ternary operator (`? :`) but for types instead of values. They enable:
+- Type-level logic and branching
+- Type transformations based on structure
+- Extracting types from complex structures
+- Creating adaptive utility types
+</Note>
+
+## Basic Conditional Type Syntax
+
+### Simple Condition
+
+```typescript
+type TypeName<T> = 
+    T extends string ? "string" :
+    T extends number ? "number" :
+    T extends boolean ? "boolean" :
+    T extends undefined ? "undefined" :
+    T extends Function ? "function" :
+    "object";
+
+type T0 = TypeName<string>;     // "string"
+type T1 = TypeName<"hello">;    // "string"
+type T2 = TypeName<42>;         // "number"
+type T3 = TypeName<() => void>; // "function"
+type T4 = TypeName<string[]>;   // "object"
+```
+
+### Conditional with Union Types
+
+From [Exercise 10](/exercises/generics), here's a practical example:
+
+```typescript
+type ApiResponse<T> = 
+    | { status: 'success'; data: T }
+    | { status: 'error'; error: string };
+
+// Extract success response type
+type SuccessResponse<T> = ApiResponse<T> extends { status: 'success'; data: infer D } 
+    ? { status: 'success'; data: D }
+    : never;
+
+// Extract error response type
+type ErrorResponse<T> = ApiResponse<T> extends { status: 'error'; error: infer E }
+    ? { status: 'error'; error: E }
+    : never;
+```
+
+## The infer Keyword
+
+The `infer` keyword lets you extract and bind types within conditional types:
+
+### Inferring Return Types
+
+```typescript
+type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+
+function getUser() {
+    return { name: 'John', age: 30 };
+}
+
+type User = ReturnType<typeof getUser>;
+// { name: string; age: number }
+```
+
+### Inferring Parameter Types
+
+```typescript
+type Parameters<T> = T extends (...args: infer P) => any ? P : never;
+
+function createUser(name: string, age: number) {
+    return { name, age };
+}
+
+type CreateUserParams = Parameters<typeof createUser>;
+// [name: string, age: number]
+
+type FirstParam = CreateUserParams[0];   // string
+type SecondParam = CreateUserParams[1];  // number
+```
+
+### Inferring Array Element Types
+
+```typescript
+type Unpack<T> = T extends (infer U)[] ? U : T;
+
+type StringArray = Unpack<string[]>;  // string
+type NumberArray = Unpack<number[]>;  // number
+type NotArray = Unpack<string>;       // string
+```
+
+<Tip>
+The `infer` keyword is powerful for:
+- Extracting nested types
+- Unwrapping generic types
+- Building custom utility types
+- Type introspection
+</Tip>
+
+### Inferring from Complex Structures
+
+From [Exercise 10](/exercises/generics):
+
+```typescript
+type ApiResponse<T> = 
+    | { status: 'success'; data: T }
+    | { status: 'error'; error: string };
+
+type CallbackBasedAsyncFunction<T> = (
+    callback: (response: ApiResponse<T>) => void
+) => void;
+
+// Extract the data type T from the callback structure
+type ExtractCallbackData<F> = 
+    F extends (callback: (response: ApiResponse<infer T>) => void) => void 
+        ? T 
+        : never;
+
+type OldRequestUsers = (callback: (response: ApiResponse<User[]>) => void) => void;
+type UsersData = ExtractCallbackData<OldRequestUsers>;  // User[]
+```
+
+## Distributive Conditional Types
+
+When conditional types are applied to union types, they distribute over the union:
+
+```typescript
+type ToArray<T> = T extends any ? T[] : never;
+
+// Distributes over the union
+type StringOrNumberArray = ToArray<string | number>;
+// string[] | number[] (not (string | number)[])
+```
+
+### Understanding Distribution
+
+<Tabs>
+  <Tab title="Distributive">
+    ```typescript
+    // Naked type parameter - distributes
+    type ToArray<T> = T extends any ? T[] : never;
+
+    type Result = ToArray<string | number>;
+    // Distributes to:
+    // ToArray<string> | ToArray<number>
+    // string[] | number[]
+    ```
+  </Tab>
+  <Tab title="Non-Distributive">
+    ```typescript
+    // Wrapped type parameter - doesn't distribute
+    type ToArray<T> = [T] extends [any] ? T[] : never;
+
+    type Result = ToArray<string | number>;
+    // Does not distribute:
+    // (string | number)[]
+    ```
+  </Tab>
+</Tabs>
+
+### Practical Distribution Example
+
+```typescript
+// Extract only specific types from a union
+type ExtractString<T> = T extends string ? T : never;
+
+type Mixed = string | number | boolean | string[];
+type OnlyStrings = ExtractString<Mixed>;
+// string (other types become never and are removed)
+
+// Filter out specific types
+type RemoveString<T> = T extends string ? never : T;
+
+type WithoutStrings = RemoveString<Mixed>;
+// number | boolean | string[]
+```
+
+<Accordion title="Why does distribution happen?">
+  Distribution is TypeScript's way of applying the conditional type to each member of a union individually, then combining the results. This is useful for filtering and transforming unions.
+
+  To prevent distribution, wrap the type parameter in a tuple:
+  ```typescript
+  type NoDistribute<T> = [T] extends [any] ? T : never;
+  ```
+</Accordion>
+
+## Built-in Conditional Types
+
+TypeScript provides several built-in conditional types:
+
+### Exclude and Extract
+
+```typescript
+// Exclude - removes types from a union
+type Exclude<T, U> = T extends U ? never : T;
+
+type PersonType = 'user' | 'admin' | 'guest';
+type ActiveType = Exclude<PersonType, 'guest'>;
+// 'user' | 'admin'
+
+// Extract - keeps only matching types
+type Extract<T, U> = T extends U ? T : never;
+
+type PrivilegedType = Extract<PersonType, 'user' | 'admin'>;
+// 'user' | 'admin'
+```
+
+### NonNullable
+
+```typescript
+type NonNullable<T> = T extends null | undefined ? never : T;
+
+type MaybeUser = User | null | undefined;
+type DefiniteUser = NonNullable<MaybeUser>;
+// User
+```
+
+### Awaited
+
+From promises:
+
+```typescript
+type Awaited<T> = 
+    T extends PromiseLike<infer U> 
+        ? Awaited<U>  // Recursive for nested Promises
+        : T;
+
+type AsyncUser = Promise<User>;
+type SyncUser = Awaited<AsyncUser>;  // User
+
+type NestedAsync = Promise<Promise<User>>;
+type Resolved = Awaited<NestedAsync>;  // User
+```
+
+## Advanced Patterns
+
+### Recursive Conditional Types
+
+```typescript
+// Flatten nested arrays to any depth
+type Flatten<T> = T extends Array<infer U> 
+    ? Flatten<U>  // Recursively flatten
+    : T;
+
+type NestedArray = number[][][];
+type Flat = Flatten<NestedArray>;  // number
+
+type MixedNested = (string | number[])[];
+type MixedFlat = Flatten<MixedNested>;  // string | number
+```
+
+### Mapped Types with Conditional Types
+
+From [Exercise 15](/exercises/advanced-type-mapping):
+
+```typescript
+// Remove readonly modifier conditionally
+type Mutable<T> = {
+    -readonly [P in keyof T]: T[P];
+};
+
+// Make properties optional if they're nullable
+type NullableToOptional<T> = {
+    [P in keyof T as T[P] extends null | undefined ? P : never]?: T[P];
+} & {
+    [P in keyof T as T[P] extends null | undefined ? never : P]: T[P];
+};
+
+interface User {
+    name: string;
+    age: number;
+    email: string | null;
+}
+
+type OptionalNullable = NullableToOptional<User>;
+// {
+//     name: string;
+//     age: number;
+//     email?: string | null;
+// }
+```
+
+### Function Overload Resolution
+
+From [Exercise 6](/exercises/generics):
+
+```typescript
+// Conditional types to determine return type based on input
+type FilterResult<T extends string> = 
+    T extends 'user' ? User[] :
+    T extends 'admin' ? Admin[] :
+    Person[];
+
+function filterPersons<T extends string>(
+    persons: Person[],
+    personType: T,
+    criteria: Partial<Person>
+): FilterResult<T> {
+    // Implementation
+    return persons.filter(p => p.type === personType) as FilterResult<T>;
+}
+
+const users = filterPersons(persons, 'user', { age: 23 });    // User[]
+const admins = filterPersons(persons, 'admin', { age: 23 });  // Admin[]
+```
+
+### Template Literal Type Transformations
+
+```typescript
+// Capitalize property names
+type Getters<T> = {
+    [K in keyof T as `get${Capitalize<string & K>}`]: () => T[K];
+};
+
+interface User {
+    name: string;
+    age: number;
+}
+
+type UserGetters = Getters<User>;
+// {
+//     getName: () => string;
+//     getAge: () => number;
+// }
+```
+
+## Type-Level Programming Patterns
+
+### Pattern Matching
+
+```typescript
+// Match specific patterns and extract information
+type ParseRoute<T extends string> = 
+    T extends `${infer Start}/user/${infer UserId}/${infer Rest}`
+        ? { start: Start; userId: UserId; rest: Rest }
+    : T extends `${infer Start}/user/${infer UserId}`
+        ? { start: Start; userId: UserId; rest: never }
+    : never;
+
+type Route1 = ParseRoute<"/api/user/123/posts">;
+// { start: "/api"; userId: "123"; rest: "posts" }
+
+type Route2 = ParseRoute<"/api/user/456">;
+// { start: "/api"; userId: "456"; rest: never }
+```
+
+### Type-Safe Event Handlers
+
+```typescript
+interface EventMap {
+    click: MouseEvent;
+    keypress: KeyboardEvent;
+    custom: { data: string };
+}
+
+type EventHandler<K extends keyof EventMap> = 
+    (event: EventMap[K]) => void;
+
+function addEventListener<K extends keyof EventMap>(
+    event: K,
+    handler: EventHandler<K>
+) {
+    // Implementation
+}
+
+// Type-safe event handlers
+addEventListener('click', (e) => {
+    console.log(e.clientX);  // MouseEvent properties available
+});
+
+addEventListener('keypress', (e) => {
+    console.log(e.key);  // KeyboardEvent properties available
+});
+```
+
+### Conditional Property Types
+
+From [Exercise 8](/exercises/generics):
+
+```typescript
+// Create a PowerUser that combines User and Admin properties
+type PowerUser = Omit<User, 'type'> & Omit<Admin, 'type'> & {
+    type: 'powerUser';
+};
+
+// Generic version using conditional types
+type Merge<T, U> = {
+    [K in keyof T | keyof U]: 
+        K extends keyof T 
+            ? K extends keyof U 
+                ? T[K] | U[K]  // If in both, union the types
+                : T[K]          // If only in T
+            : K extends keyof U 
+                ? U[K]          // If only in U
+                : never;
+};
+```
+
+## Practical Use Cases
+
+### API Response Handling
+
+```typescript
+type ApiResponse<T> = 
+    | { status: 'success'; data: T }
+    | { status: 'error'; error: string };
+
+// Extract data type safely
+type ExtractData<T> = T extends { data: infer D } ? D : never;
+
+type ResponseData = ExtractData<{ status: 'success'; data: User[] }>;
+// User[]
+
+// Check if response is successful
+type IsSuccess<T> = T extends { status: 'success' } ? true : false;
+
+type Check1 = IsSuccess<{ status: 'success'; data: User[] }>;  // true
+type Check2 = IsSuccess<{ status: 'error'; error: string }>;   // false
+```
+
+### Form Validation Types
+
+```typescript
+// Make fields required if they're used in validation
+type ValidationRules<T> = {
+    [K in keyof T]?: {
+        required?: boolean;
+        minLength?: number;
+        maxLength?: number;
+    };
+};
+
+type RequiredFields<T, Rules extends ValidationRules<T>> = {
+    [K in keyof T as Rules[K] extends { required: true } ? K : never]: T[K];
+} & {
+    [K in keyof T as Rules[K] extends { required: true } ? never : K]?: T[K];
+};
+
+interface UserForm {
+    name: string;
+    email: string;
+    age: number;
+}
+
+type Rules = {
+    name: { required: true; minLength: 3 };
+    email: { required: true };
+    age: { required: false };
+};
+
+type ValidatedForm = RequiredFields<UserForm, Rules>;
+// {
+//     name: string;    // Required
+//     email: string;   // Required
+//     age?: number;    // Optional
+// }
+```
+
+## Best Practices
+
+<Accordion title="Keep conditional types simple and readable">
+  Complex nested conditionals are hard to understand:
+
+  ```typescript
+  // Less readable
+  type Complex<T> = T extends A ? B : T extends C ? D : T extends E ? F : G;
+
+  // More readable - break into smaller types
+  type IsA<T> = T extends A ? B : T;
+  type IsC<T> = T extends C ? D : T;
+  type IsE<T> = T extends E ? F : T;
+  type Simple<T> = IsE<IsC<IsA<T>>>;
+  ```
+</Accordion>
+
+<Accordion title="Use infer to extract types, not to create them">
+  `infer` is for extracting existing types:
+
+  ```typescript
+  // Good - extracting return type
+  type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+
+  // Bad - trying to create new types
+  type Bad<T> = T extends any ? infer U : never;  // U is not defined
+  ```
+</Accordion>
+
+<Accordion title="Prevent distribution when needed">
+  Wrap type parameters to prevent distribution:
+
+  ```typescript
+  // Distributes over unions
+  type Distributed<T> = T extends any ? T[] : never;
+  type Result1 = Distributed<string | number>;  // string[] | number[]
+
+  // Doesn't distribute
+  type NotDistributed<T> = [T] extends [any] ? T[] : never;
+  type Result2 = NotDistributed<string | number>;  // (string | number)[]
+  ```
+</Accordion>
+
+<Accordion title="Document complex conditional types">
+  Add JSDoc comments to explain logic:
+
+  ```typescript
+  /**
+   * Extracts the element type from an array type.
+   * If T is not an array, returns T unchanged.
+   * 
+   * @example
+   * type A = Unpack<string[]>;  // string
+   * type B = Unpack<number>;    // number
+   */
+  type Unpack<T> = T extends (infer U)[] ? U : T;
+  ```
+</Accordion>
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Generics" icon="code" href="/concepts/generics-advanced">
+    Use conditional types with generic parameters
+  </Card>
+  <Card title="Utility Types" icon="wrench" href="/concepts/utility-types">
+    See how built-in utilities use conditional types
+  </Card>
+  <Card title="Exercise 10" icon="dumbbell" href="/exercises/generics">
+    Practice with callback and promise type transformations
+  </Card>
+  <Card title="Exercise 14" icon="dumbbell" href="/exercises/advanced-type-mapping">
+    Build complex conditional type patterns
+  </Card>
+</CardGroup>
+
+## Further Reading
+
+- [TypeScript Handbook: Conditional Types](https://www.typescriptlang.org/docs/handbook/2/conditional-types.html)
+- [TypeScript Handbook: Type Inference in Conditional Types](https://www.typescriptlang.org/docs/handbook/2/conditional-types.html#inferring-within-conditional-types)

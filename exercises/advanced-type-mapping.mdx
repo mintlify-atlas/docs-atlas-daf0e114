@@ -1,0 +1,611 @@
+---
+title: Advanced Type Mapping (Exercises 14-15)
+description: Master complex type transformations and type-safe object manipulation
+---
+
+These final exercises dive into advanced TypeScript features: currying, function overloads, mapped types, and type-safe object manipulation.
+
+## Exercise 14: Curried Functions with Overloads
+
+### Scenario
+
+You're building a functional programming library with curried functions. Each function should support multiple calling patterns:
+- No arguments: returns itself
+- Partial arguments: returns a function waiting for remaining arguments
+- All arguments: executes and returns the result
+
+### The Problem
+
+```javascript
+export function map(mapper, input) {
+    if (arguments.length === 0) {
+        return map;
+    }
+    if (arguments.length === 1) {
+        return function subFunction(subInput) {
+            if (arguments.length === 0) {
+                return subFunction;
+            }
+            return subInput.map(mapper);
+        };
+    }
+    return input.map(mapper);
+}
+
+// No types - everything is 'any'
+```
+
+<Warning>
+  These functions use `arguments.length` checks, making typing complex. You need function overloads to capture all possible call signatures.
+</Warning>
+
+### Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Function Overloads" icon="layer-group">
+    Multiple type signatures for different argument combinations
+  </Card>
+  
+  <Card title="Currying" icon="link">
+    Transforming a function with multiple arguments into a sequence of functions
+  </Card>
+  
+  <Card title="Recursive Types" icon="rotate">
+    Types that reference themselves for nested function returns
+  </Card>
+</CardGroup>
+
+### Understanding Currying
+
+Currying transforms a function like this:
+
+```typescript
+// Regular function
+function add(a: number, b: number): number {
+    return a + b;
+}
+add(2, 3);  // 5
+
+// Curried function
+function addCurried(a: number): (b: number) => number {
+    return (b: number) => a + b;
+}
+addCurried(2)(3);  // 5
+
+const add2 = addCurried(2);
+add2(3);  // 5
+add2(5);  // 7
+```
+
+These exercises add a twist: calling with no arguments returns the function itself.
+
+### Solution: Map Function
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export function map(mapper, input) {
+        if (arguments.length === 0) return map;
+        if (arguments.length === 1) {
+            return function subFunction(subInput) {
+                if (arguments.length === 0) return subFunction;
+                return subInput.map(mapper);
+            };
+        }
+        return input.map(mapper);
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    interface MapperFunc<I, O> {
+        (): MapperFunc<I, O>;
+        (input: I[]): O[];
+    }
+    
+    interface MapFunc {
+        (): MapFunc;
+        <I, O>(mapper: (item: I) => O): MapperFunc<I, O>;
+        <I, O>(mapper: (item: I) => O, input: I[]): O[];
+    }
+    
+    export const map: MapFunc = function(mapper?, input?) {
+        if (arguments.length === 0) return map;
+        if (arguments.length === 1) {
+            return function subFunction(subInput?) {
+                if (arguments.length === 0) return subFunction;
+                return subInput.map(mapper);
+            };
+        }
+        return input.map(mapper);
+    } as MapFunc;
+    ```
+  </Tab>
+</Tabs>
+
+### Breaking Down the Types
+
+<Steps>
+  <Step title="MapperFunc - Partial Application">
+    ```typescript
+    interface MapperFunc<I, O> {
+        (): MapperFunc<I, O>;  // Called with no args - returns itself
+        (input: I[]): O[];      // Called with input - executes map
+    }
+    ```
+    This represents the function returned when you call `map` with just a mapper.
+  </Step>
+  
+  <Step title="MapFunc - Full Interface">
+    ```typescript
+    interface MapFunc {
+        (): MapFunc;  // No args - returns itself
+        <I, O>(mapper: (item: I) => O): MapperFunc<I, O>;  // Mapper only
+        <I, O>(mapper: (item: I) => O, input: I[]): O[];   // Both args
+    }
+    ```
+    Defines all possible ways to call `map`.
+  </Step>
+  
+  <Step title="Generic Type Parameters">
+    - `I`: Input array element type
+    - `O`: Output array element type
+    
+    These are inferred from usage:
+    ```typescript
+    map((x: number) => x.toString(), [1, 2, 3])
+    //   ^^^^^^ I=number  ^^^^^^^^^^^ O=string
+    ```
+  </Step>
+</Steps>
+
+### Usage Examples
+
+```typescript
+const numbers = [1, 2, 3, 4, 5];
+
+// All arguments at once
+const strings = map((x: number) => x.toString(), numbers);
+// strings: string[]
+
+// Curried - create reusable mapper
+const double = map((x: number) => x * 2);
+const doubled = double(numbers);  // [2, 4, 6, 8, 10]
+const moreDoubled = double([10, 20]);  // [20, 40]
+
+// Called with no args - returns itself
+const mapAgain = map();
+mapAgain === map;  // true
+```
+
+### Other Curried Functions
+
+<Accordion title="Filter Function">
+  ```typescript
+  interface FiltererFunc<I> {
+      (): FiltererFunc<I>;
+      (input: I[]): I[];
+  }
+  
+  interface FilterFunc {
+      (): FilterFunc;
+      <I>(filterer: (item: I) => boolean): FiltererFunc<I>;
+      <I>(filterer: (item: I) => boolean, input: I[]): I[];
+  }
+  
+  export const filter: FilterFunc = /* implementation */;
+  
+  // Usage
+  const evens = filter((x: number) => x % 2 === 0);
+  evens([1, 2, 3, 4]);  // [2, 4]
+  ```
+</Accordion>
+
+<Accordion title="Add Function (Simpler)">
+  ```typescript
+  interface ArithmeticArgFunc {
+      (): ArithmeticArgFunc;
+      (b: number): number;
+  }
+  
+  interface ArithmeticFunc {
+      (): ArithmeticFunc;
+      (a: number): ArithmeticArgFunc;
+      (a: number, b: number): number;
+  }
+  
+  export const add: ArithmeticFunc = /* implementation */;
+  
+  // Usage
+  add(2, 3);        // 5
+  add(2)(3);        // 5
+  const add2 = add(2);
+  add2(3);          // 5
+  add2()()()(10);   // 12
+  ```
+</Accordion>
+
+<Accordion title="Pipe Function">
+  ```typescript
+  type F<A extends unknown[], R> = (...args: A) => R;
+  type TR<I, O> = (arg: I) => O;
+  
+  interface PipeFunc {
+      (): PipeFunc;
+      <A1 extends unknown[], R1>(f: F<A1, R1>): (...args: A1) => R1;
+      <A1 extends unknown[], R1, R2>(
+          f: F<A1, R1>, 
+          tr1: TR<R1, R2>
+      ): (...args: A1) => R2;
+      <A1 extends unknown[], R1, R2, R3>(
+          f: F<A1, R1>, 
+          tr1: TR<R1, R2>, 
+          tr2: TR<R2, R3>
+      ): (...args: A1) => R3;
+      // ... more overloads for additional functions
+  }
+  
+  export const pipe: PipeFunc = /* implementation */;
+  
+  // Usage
+  const transform = pipe(
+      (x: number) => x * 2,
+      (x: number) => x.toString(),
+      (x: string) => x + '!'
+  );
+  transform(5);  // '10!'
+  ```
+</Accordion>
+
+---
+
+## Exercise 15: Type-Safe Object Manipulation
+
+### Scenario
+
+Build an `ObjectManipulator` class that lets you safely get, set, and delete properties while tracking type changes.
+
+### The Problem
+
+```typescript
+export class ObjectManipulator {
+    constructor(protected obj) {}  // No type
+    
+    public set(key, value) {  // No types
+        return new ObjectManipulator({...this.obj, [key]: value});
+    }
+    
+    public get(key) {  // Returns 'any'
+        return this.obj[key];
+    }
+    
+    public delete(key) {  // No type tracking
+        const newObj = {...this.obj};
+        delete newObj[key];
+        return new ObjectManipulator(newObj);
+    }
+    
+    public getObject() {  // Returns 'any'
+        return this.obj;
+    }
+}
+```
+
+<Warning>
+  The class has no generic type parameter, so all operations lose type information.
+</Warning>
+
+### Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Generic Classes" icon="box">
+    Classes parameterized by types
+  </Card>
+  
+  <Card title="Mapped Types" icon="map">
+    Creating new types by transforming properties
+  </Card>
+  
+  <Card title="Type Evolution" icon="arrow-right">
+    Tracking how types change through operations
+  </Card>
+</CardGroup>
+
+### Solution
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export class ObjectManipulator {
+        constructor(protected obj) {}
+        
+        public set(key, value) {
+            return new ObjectManipulator({...this.obj, [key]: value});
+        }
+        
+        public get(key) {
+            return this.obj[key];
+        }
+        
+        public delete(key) {
+            const newObj = {...this.obj};
+            delete newObj[key];
+            return new ObjectManipulator(newObj);
+        }
+        
+        public getObject() {
+            return this.obj;
+        }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    type ObjectWithNewProp<T, K extends string, V> = T & {[NK in K]: V};
+    
+    export class ObjectManipulator<T> {
+        constructor(protected obj: T) {}
+        
+        public set<K extends string, V>(
+            key: K, 
+            value: V
+        ): ObjectManipulator<ObjectWithNewProp<T, K, V>> {
+            return new ObjectManipulator(
+                {...this.obj, [key]: value} as ObjectWithNewProp<T, K, V>
+            );
+        }
+        
+        public get<K extends keyof T>(key: K): T[K] {
+            return this.obj[key];
+        }
+        
+        public delete<K extends keyof T>(key: K): ObjectManipulator<Omit<T, K>> {
+            const newObj = {...this.obj};
+            delete newObj[key];
+            return new ObjectManipulator(newObj);
+        }
+        
+        public getObject(): T {
+            return this.obj;
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Understanding Type Evolution
+
+<Steps>
+  <Step title="Start with Initial Type">
+    ```typescript
+    const manipulator = new ObjectManipulator({ name: 'John', age: 30 });
+    // Type: ObjectManipulator<{ name: string; age: number }>
+    ```
+  </Step>
+  
+  <Step title="Set Adds Property">
+    ```typescript
+    const withRole = manipulator.set('role', 'admin');
+    // Type: ObjectManipulator<{ name: string; age: number; role: string }>
+    ```
+  </Step>
+  
+  <Step title="Delete Removes Property">
+    ```typescript
+    const withoutAge = withRole.delete('age');
+    // Type: ObjectManipulator<{ name: string; role: string }>
+    ```
+  </Step>
+  
+  <Step title="Get Returns Correct Type">
+    ```typescript
+    const name = withoutAge.get('name');  // string
+    const role = withoutAge.get('role');  // string
+    // withoutAge.get('age');  // ❌ Error: 'age' doesn't exist
+    ```
+  </Step>
+</Steps>
+
+### Key Type Definitions
+
+<Accordion title="ObjectWithNewProp Helper">
+  ```typescript
+  type ObjectWithNewProp<T, K extends string, V> = T & {[NK in K]: V};
+  ```
+  
+  This creates a new type by adding a property:
+  - `T`: The existing object type
+  - `K`: The new property name (must be a string literal)
+  - `V`: The new property's value type
+  - `{[NK in K]: V}`: Mapped type that creates `{ [key]: V }`
+  - `T & ...`: Intersection combines the types
+  
+  Example:
+  ```typescript
+  type User = { name: string };
+  type UserWithAge = ObjectWithNewProp<User, 'age', number>;
+  // Result: { name: string; age: number }
+  ```
+</Accordion>
+
+<Accordion title="Generic Method Parameters">
+  Each method has its own generic parameters:
+  
+  ```typescript
+  // Class has generic T
+  export class ObjectManipulator<T> {
+      // Method adds generic K for the key
+      public get<K extends keyof T>(key: K): T[K] {
+          return this.obj[key];
+      }
+  }
+  ```
+  
+  The `K extends keyof T` constraint ensures you can only get keys that exist on `T`.
+</Accordion>
+
+### Usage Examples
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+}
+
+const user: User = { name: 'Alice', age: 25 };
+const manipulator = new ObjectManipulator(user);
+
+// Get existing properties
+const name = manipulator.get('name');  // string
+const age = manipulator.get('age');    // number
+
+// Set new property
+const withEmail = manipulator.set('email', 'alice@example.com');
+const email = withEmail.get('email');  // string
+
+// Delete property
+const withoutAge = withEmail.delete('age');
+// withoutAge.get('age');  // ❌ Error: Property 'age' does not exist
+
+// Get final object
+const final = withoutAge.getObject();
+// Type: { name: string; email: string }
+
+// Chain operations
+const result = new ObjectManipulator({ x: 1 })
+    .set('y', 2)
+    .set('z', 3)
+    .delete('x')
+    .getObject();
+// Type: { y: number; z: number }
+```
+
+### Advanced Patterns
+
+<CodeGroup>
+  ```typescript Builder Pattern
+  class UserBuilder extends ObjectManipulator<{}> {
+      constructor() {
+          super({});
+      }
+      
+      withName(name: string) {
+          return this.set('name', name);
+      }
+      
+      withAge(age: number) {
+          return this.set('age', age);
+      }
+      
+      build() {
+          return this.getObject();
+      }
+  }
+  
+  const user = new UserBuilder()
+      .withName('Bob')
+      .withAge(30)
+      .build();
+  // Type: { name: string; age: number }
+  ```
+  
+  ```typescript Immutable Updates
+  interface State {
+      count: number;
+      user: User | null;
+  }
+  
+  const state: State = { count: 0, user: null };
+  const manipulator = new ObjectManipulator(state);
+  
+  // Immutable state updates
+  const newState = manipulator
+      .set('count', 1)
+      .set('user', { name: 'Alice', age: 25 })
+      .getObject();
+  
+  // Original unchanged
+  console.log(state.count);     // 0
+  console.log(newState.count);  // 1
+  ```
+  
+  ```typescript Type-Safe Configs
+  const defaultConfig = {
+      host: 'localhost',
+      port: 3000,
+      secure: false
+  };
+  
+  const config = new ObjectManipulator(defaultConfig)
+      .set('port', 8080)
+      .set('apiKey', 'secret-key')
+      .getObject();
+  
+  // Type: {
+  //   host: string;
+  //   port: number;
+  //   secure: boolean;
+  //   apiKey: string;
+  // }
+  ```
+</CodeGroup>
+
+## Why These Patterns Matter
+
+<AccordionGroup>
+  <Accordion title="Functional Programming">
+    Curried functions enable:
+    - Partial application
+    - Function composition
+    - Point-free style
+    - Reusable transformations
+  </Accordion>
+  
+  <Accordion title="Type Safety">
+    Tracking type changes through operations prevents:
+    - Accessing deleted properties
+    - Type mismatches
+    - Runtime errors
+    - Invalid transformations
+  </Accordion>
+  
+  <Accordion title="Immutability">
+    Creating new objects instead of mutating:
+    - Prevents bugs from shared mutable state
+    - Enables time-travel debugging
+    - Makes code predictable
+    - Supports concurrent operations
+  </Accordion>
+</AccordionGroup>
+
+## What You Learned
+
+<AccordionGroup>
+  <Accordion title="Advanced Function Overloads">
+    Define complex type signatures for functions with multiple calling patterns
+  </Accordion>
+  
+  <Accordion title="Generic Classes">
+    Create classes that track and transform types through operations
+  </Accordion>
+  
+  <Accordion title="Mapped Types">
+    Generate new types by transforming existing type properties
+  </Accordion>
+  
+  <Accordion title="Type-Level Programming">
+    Use TypeScript's type system to enforce invariants at compile time
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  Congratulations! You've completed all TypeScript exercises, progressing from basic interfaces to advanced type manipulation. You now have the skills to build type-safe, maintainable TypeScript applications.
+</Note>
+
+## Additional Resources
+
+- [TypeScript Handbook: Advanced Types](https://www.typescriptlang.org/docs/handbook/2/types-from-types.html)
+- [TypeScript Handbook: Mapped Types](https://www.typescriptlang.org/docs/handbook/2/mapped-types.html)
+- [TypeScript Handbook: Conditional Types](https://www.typescriptlang.org/docs/handbook/2/conditional-types.html)

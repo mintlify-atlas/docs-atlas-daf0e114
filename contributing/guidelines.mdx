@@ -1,0 +1,395 @@
+---
+title: 'Contribution Guidelines'
+description: 'Code style, standards, and best practices for contributing'
+---
+
+# Contribution Guidelines
+
+This guide covers the coding standards, best practices, and processes for contributing to TypeScript Exercises.
+
+## Code Style
+
+The project enforces consistent code style through ESLint and Prettier configurations.
+
+### ESLint Configuration
+
+The project uses a comprehensive ESLint setup:
+
+<AccordionGroup>
+  <Accordion title="ESLint Extends">
+    ```json
+    [
+      "eslint-config-react-app",
+      "eslint:recommended",
+      "plugin:react/recommended",
+      "plugin:@typescript-eslint/recommended",
+      "prettier",
+      "plugin:prettier/recommended"
+    ]
+    ```
+  </Accordion>
+  
+  <Accordion title="Key TypeScript Rules">
+    - **@typescript-eslint/no-explicit-any**: `warn` - Avoid using `any` type
+    - **@typescript-eslint/consistent-type-definitions**: Use `interface` over `type`
+    - **@typescript-eslint/no-unused-vars**: Warn about unused variables (except those prefixed with `_`)
+    - **@typescript-eslint/no-use-before-define**: Error, but allows functions and classes
+  </Accordion>
+  
+  <Accordion title="Import Rules">
+    - **import/no-relative-parent-imports**: Error - No `../` imports
+    - **import/order**: Alphabetically ordered imports in groups (builtin, external, internal, sibling)
+    - **no-duplicate-imports**: Error - No duplicate import statements
+  </Accordion>
+  
+  <Accordion title="React Rules">
+    - **react/jsx-curly-brace-presence**: Use curly braces only when necessary
+    - **react/jsx-boolean-value**: Always explicit boolean values
+    - **react/prop-types**: Off (using TypeScript instead)
+  </Accordion>
+</AccordionGroup>
+
+### Prettier Configuration
+
+The project uses Prettier for consistent formatting:
+
+```json .prettierrc
+{
+  "singleQuote": true,
+  "semi": true,
+  "tabWidth": 4,
+  "printWidth": 120,
+  "trailingComma": "none",
+  "arrowParens": "always",
+  "bracketSpacing": false,
+  "endOfLine": "lf",
+  "jsxBracketSameLine": true,
+  "jsxSingleQuote": true
+}
+```
+
+<Note>
+Prettier is integrated with ESLint through `prettier/prettier` rule with `singleQuote: true`.
+</Note>
+
+### Running Code Quality Checks
+
+<CodeGroup>
+```bash Check for Issues
+yarn lint
+```
+
+```bash Auto-fix Issues
+yarn lint-fix
+```
+</CodeGroup>
+
+<Warning>
+The pre-commit hook automatically runs `npm run lint` before every commit. Make sure your code passes linting before committing.
+</Warning>
+
+## Creating New Exercises
+
+When creating a new exercise, follow this structure:
+
+<Steps>
+  <Step title="Create Exercise Directory">
+    Create a new numbered directory in `src/exercises/`:
+    
+    ```bash
+    mkdir src/exercises/17
+    ```
+  </Step>
+  
+  <Step title="Create Required Files">
+    Each exercise needs three files:
+    
+    ```
+    src/exercises/17/
+    ├── index.ts           # Starter code with type errors
+    ├── index.solution.ts  # Working solution
+    └── test.ts           # Test cases
+    ```
+  </Step>
+  
+  <Step title="Write the Exercise (index.ts)">
+    Start with a comprehensive comment block:
+    
+    ```typescript index.ts
+    /*
+    
+    Exercise [NUMBER]:
+    
+        [Brief description of the problem]
+    
+    Intro:
+    
+        [Context and background for the exercise]
+    
+    Exercise:
+    
+        [Specific task to complete]
+    
+    */
+    
+    // Your exercise code with intentional type errors
+    export type SomeType = unknown;
+    
+    // In case you are stuck:
+    // [Link to relevant TypeScript documentation]
+    ```
+  </Step>
+  
+  <Step title="Write the Solution (index.solution.ts)">
+    Provide a complete, working solution:
+    
+    ```typescript index.solution.ts
+    // Same structure as index.ts but with correct types
+    export interface SomeType {
+        // Properly defined types
+    }
+    ```
+  </Step>
+  
+  <Step title="Write Tests (test.ts)">
+    Create test cases that verify the solution works correctly.
+  </Step>
+</Steps>
+
+## Exercise Design Principles
+
+<CardGroup cols={2}>
+  <Card title="Progressive Difficulty" icon="stairs">
+    Each exercise should be slightly harder than the previous one
+  </Card>
+  
+  <Card title="Single Concept Focus" icon="bullseye">
+    Teach one main TypeScript concept per exercise
+  </Card>
+  
+  <Card title="Real-World Context" icon="globe">
+    Use realistic scenarios and data structures
+  </Card>
+  
+  <Card title="Clear Instructions" icon="message">
+    Provide context, goals, and hints in comments
+  </Card>
+</CardGroup>
+
+### Exercise Categories
+
+Exercises should align with one of these categories:
+
+1. **Basic typing** (Exercises 1-3) - Interfaces, types, basic objects
+2. **Refining types** (Exercises 4-5) - Type guards, narrowing
+3. **Union types** (Exercises 6-7) - Discriminated unions, type unions
+4. **Merged types** (Exercises 8-9) - Intersection types
+5. **Generics** (Exercises 10-11) - Generic functions and types
+6. **Type declarations** (Exercises 12-13) - `.d.ts` files for JS libraries
+7. **Module augmentation** (Exercises 14-15) - Extending module types
+8. **Advanced type mapping** (Exercises 16+) - Conditional types, mapped types
+
+## The Golden Rule: No `any` Type
+
+<Warning>
+**Critical Rule**: Avoid using `any` type at all costs!
+</Warning>
+
+This is the #1 principle of TypeScript Exercises. Solutions should demonstrate proper TypeScript usage:
+
+<CodeGroup>
+```typescript ❌ Bad
+export function logPerson(user: any) {
+    console.log(user.name);
+}
+```
+
+```typescript ✅ Good
+export interface User {
+    name: string;
+    age: number;
+}
+
+export function logPerson(user: User) {
+    console.log(user.name);
+}
+```
+</CodeGroup>
+
+The `@typescript-eslint/no-explicit-any` rule is set to `warn` to help catch this.
+
+## Pull Request Process
+
+When you're ready to submit your contribution:
+
+<Steps>
+  <Step title="Create a Feature Branch">
+    ```bash
+    git checkout -b feature/exercise-17-conditional-types
+    ```
+    
+    Use descriptive branch names:
+    - `feature/exercise-[number]-[concept]`
+    - `fix/exercise-[number]-[issue]`
+    - `docs/[description]`
+  </Step>
+  
+  <Step title="Make Your Changes">
+    - Write your code following the style guidelines
+    - Run `yarn lint-fix` to auto-fix formatting issues
+    - Test your changes with `yarn start`
+  </Step>
+  
+  <Step title="Commit Your Changes">
+    Write clear, descriptive commit messages:
+    
+    ```bash
+    git add .
+    git commit -m "Add exercise 17: conditional types"
+    ```
+    
+    <Note>
+    The pre-commit hook will automatically run linting. Fix any errors before the commit succeeds.
+    </Note>
+  </Step>
+  
+  <Step title="Push and Create PR">
+    ```bash
+    git push origin feature/exercise-17-conditional-types
+    ```
+    
+    Then create a Pull Request on GitHub with:
+    - Clear title describing the change
+    - Description of what the change does
+    - Any relevant context or testing notes
+  </Step>
+  
+  <Step title="Respond to Feedback">
+    Be responsive to code review feedback and make requested changes promptly.
+  </Step>
+</Steps>
+
+## Testing Your Changes
+
+<AccordionGroup>
+  <Accordion title="Manual Testing">
+    1. Start the development server: `yarn start`
+    2. Navigate to your new/modified exercise
+    3. Verify the exercise displays correctly
+    4. Check that type errors appear as expected
+    5. Test that the solution resolves all errors
+  </Accordion>
+  
+  <Accordion title="Lint Testing">
+    ```bash
+    yarn lint
+    ```
+    
+    Ensure no linting errors are present.
+  </Accordion>
+  
+  <Accordion title="Build Testing">
+    ```bash
+    yarn build
+    ```
+    
+    Verify the project builds successfully for production.
+  </Accordion>
+</AccordionGroup>
+
+## Documentation Standards
+
+When documenting exercises:
+
+<CardGroup cols={2}>
+  <Card title="Clear Explanations" icon="comment">
+    Explain the "why" not just the "what"
+  </Card>
+  
+  <Card title="Code Examples" icon="code">
+    Show both incorrect and correct approaches
+  </Card>
+  
+  <Card title="External Links" icon="link">
+    Link to official TypeScript documentation
+  </Card>
+  
+  <Card title="Hints" icon="lightbulb">
+    Provide hints at the bottom for stuck learners
+  </Card>
+</CardGroup>
+
+### Comment Structure
+
+Use this template for exercise files:
+
+```typescript
+/*
+
+Exercise [NUMBER]:
+
+    [One-line description]
+
+Intro:
+
+    [2-3 paragraphs providing context and background.
+    What is the scenario? What problem are we solving?
+    Make it relatable and realistic.]
+
+Exercise:
+
+    [Specific instructions on what to do.
+    Be clear and concise.]
+
+*/
+
+// Exercise code here
+
+// In case you are stuck:
+// [Link to TypeScript handbook or relevant docs]
+```
+
+## Code Review Guidelines
+
+When reviewing contributions:
+
+- ✅ Check that code follows style guidelines
+- ✅ Verify no `any` types are used (unless absolutely necessary with justification)
+- ✅ Ensure exercises are appropriate difficulty level
+- ✅ Confirm TypeScript errors are clear and educational
+- ✅ Test that solutions actually resolve all type errors
+- ✅ Validate that documentation is clear and helpful
+
+## Getting Help
+
+<CardGroup cols={2}>
+  <Card title="Open an Issue" icon="github">
+    Ask questions or report bugs on GitHub
+  </Card>
+  
+  <Card title="Provide Feedback" icon="comment">
+    Share your thoughts with the project creator
+  </Card>
+  
+  <Card title="TypeScript Docs" icon="book">
+    Refer to official TypeScript documentation
+  </Card>
+  
+  <Card title="Community" icon="users">
+    Engage with other contributors
+  </Card>
+</CardGroup>
+
+## Additional Tips
+
+<Note>
+- Keep exercises focused and concise
+- Use realistic scenarios from actual development
+- Make exercises enjoyable and engaging
+- Progressive difficulty is key to learning
+- Test thoroughly before submitting
+</Note>
+
+---
+
+Thank you for contributing to TypeScript Exercises! Your efforts help developers worldwide improve their TypeScript skills.

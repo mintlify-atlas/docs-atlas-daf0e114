@@ -1,0 +1,141 @@
+---
+title: Introduction
+description: Learn TypeScript through interactive exercises that cover basic typing, generics, module augmentation, and advanced type mapping
+---
+
+# Introduction to TypeScript Exercises
+
+TypeScript Exercises is an interactive learning platform designed to help developers master TypeScript through hands-on practice. Built with Monaco Editor and powered by a real-time TypeScript compiler, the platform provides immediate feedback as you work through progressively challenging exercises.
+
+## What is TypeScript Exercises?
+
+TypeScript Exercises is a web-based platform that lets you practice TypeScript concepts directly in your browser. Each exercise presents a real-world scenario where you need to apply specific TypeScript features to fix type errors and complete the challenge.
+
+The platform runs entirely in the browser, using:
+- **Monaco Editor** for code editing (the same editor that powers VS Code)
+- **TypeScript Compiler** running in a Web Worker for real-time type checking
+- **In-memory file system** to simulate a full TypeScript project environment
+
+## Who is This For?
+
+<CardGroup cols={2}>
+  <Card title="TypeScript Beginners" icon="graduation-cap">
+    Start with basic typing concepts and gradually build up to advanced features
+  </Card>
+  
+  <Card title="JavaScript Developers" icon="code">
+    Transition from JavaScript to TypeScript with practical, hands-on exercises
+  </Card>
+  
+  <Card title="Intermediate TypeScript Users" icon="chart-line">
+    Deepen your understanding of generics, type declarations, and advanced patterns
+  </Card>
+  
+  <Card title="Interview Preparation" icon="briefcase">
+    Practice TypeScript concepts commonly tested in technical interviews
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Real-Time Type Checking
+
+As you type, the platform continuously validates your code using the TypeScript compiler. Errors are displayed immediately in the bottom panel, showing exactly what needs to be fixed.
+
+<Info>
+The platform uses TypeScript 3.7.2 with strict mode enabled, ensuring you learn TypeScript best practices from the start.
+</Info>
+
+### Progressive Difficulty
+
+Exercises are carefully ordered to build on previous concepts:
+
+1. **Basic typing** - Define interfaces and use fundamental types
+2. **Refining types** - Work with type narrowing and type guards
+3. **Union types** - Combine multiple types effectively
+4. **Merged types** - Use intersection types and type composition
+5. **Generics** - Create reusable, type-safe components
+6. **Type declarations** - Write `.d.ts` files for JavaScript libraries
+7. **Module augmentation** - Extend existing module types
+8. **Advanced type mapping** - Master conditional types and mapped types
+
+<Note>
+Difficulty grows quickly from one exercise to the next. Don't be discouraged if you need to reference TypeScript documentation!
+</Note>
+
+### In-Browser Code Editing
+
+The platform provides a professional editing experience with:
+- Syntax highlighting
+- IntelliSense and autocomplete
+- Error squiggles and hover information
+- File navigation and tree view
+- Solution comparison view
+
+### Self-Paced Learning
+
+Work through exercises at your own pace:
+- Progress is saved automatically in local storage
+- Skip exercises if needed
+- View solutions when stuck
+- Compare your solution with the reference implementation
+
+## Core Principles
+
+<Steps>
+  <Step title="Avoid 'any' at all costs">
+    The exercises teach you to use TypeScript's type system effectively. Using `any` defeats the purpose of type safety.
+  </Step>
+  
+  <Step title="Expect increasing difficulty">
+    Each exercise builds on concepts from previous ones. The learning curve is steep but rewarding.
+  </Step>
+  
+  <Step title="Learn by doing">
+    The best way to learn TypeScript is to write TypeScript. These exercises provide structured practice.
+  </Step>
+  
+  <Step title="Enjoy the process">
+    Learning should be fun! Take your time, experiment, and don't hesitate to check the solutions.
+  </Step>
+</Steps>
+
+## Technology Stack
+
+The platform is built with modern web technologies:
+
+```json
+{
+  "editor": "monaco-editor",
+  "framework": "React",
+  "language": "TypeScript",
+  "state-management": "RxJS",
+  "styling": "@emotion"
+}
+```
+
+From `package.json:46-47`:
+```json
+"monaco": "^1.201704190613.0",
+"monaco-editor": "^0.20.0"
+```
+
+## Open Source and Community-Driven
+
+TypeScript Exercises is an open-source project created by Marat Dulin. The project welcomes contributions and feedback from the community.
+
+<Tip>
+If you find issues or have suggestions for improvements, feel free to contribute on [GitHub](https://github.com/typescript-exercises/typescript-exercises).
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Jump right in and complete your first exercise
+  </Card>
+  
+  <Card title="How It Works" icon="gears" href="/how-it-works">
+    Understand the platform architecture and exercise structure
+  </Card>
+</CardGroup>

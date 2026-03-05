@@ -1,0 +1,333 @@
+---
+title: Merged Types (Exercise 5)
+description: Master Partial and Omit utility types for flexible type composition
+---
+
+## Exercise 5: Using Partial and Omit
+
+### Scenario
+
+You need to filter users by various criteria, but requiring all User properties for the filter would be impractical. You should be able to filter by just age, or just name, or any combination.
+
+### The Problem
+
+```typescript
+interface User {
+    type: 'user';
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+export function filterUsers(persons: Person[], criteria: User): User[] {
+    return persons.filter(isUser).filter((user) => {
+        const criteriaKeys = Object.keys(criteria) as (keyof User)[];
+        return criteriaKeys.every((fieldName) => {
+            return user[fieldName] === criteria[fieldName];
+        });
+    });
+}
+
+// ❌ Error: Must provide all User properties
+filterUsers(persons, {
+    age: 23  // Missing name, type, occupation
+});
+```
+
+<Warning>
+  The `criteria` parameter requires a complete `User` object, but you only want to filter by specific fields.
+</Warning>
+
+### Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Partial<T>" icon="puzzle-piece">
+    Makes all properties of type T optional
+  </Card>
+  
+  <Card title="Omit<T, K>" icon="minus-circle">
+    Creates a type with all properties of T except those in K
+  </Card>
+</CardGroup>
+
+### Understanding Utility Types
+
+TypeScript provides built-in utility types for common type transformations:
+
+<CodeGroup>
+  ```typescript Partial
+  interface User {
+      name: string;
+      age: number;
+      occupation: string;
+  }
+  
+  type PartialUser = Partial<User>;
+  // Equivalent to:
+  // {
+  //   name?: string;
+  //   age?: number;
+  //   occupation?: string;
+  // }
+  ```
+  
+  ```typescript Omit
+  type UserWithoutType = Omit<User, 'type'>;
+  // Equivalent to:
+  // {
+  //   name: string;
+  //   age: number;
+  //   occupation: string;
+  // }
+  ```
+</CodeGroup>
+
+### Solution
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export function filterUsers(persons: Person[], criteria: User): User[] {
+        return persons.filter(isUser).filter((user) => {
+            const criteriaKeys = Object.keys(criteria) as (keyof User)[];
+            return criteriaKeys.every((fieldName) => {
+                return user[fieldName] === criteria[fieldName];
+            });
+        });
+    }
+    
+    // Must provide all properties
+    filterUsers(persons, {
+        type: 'user',  // Required
+        name: '',      // Required
+        age: 23,
+        occupation: '' // Required
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    export function filterUsers(
+        persons: Person[], 
+        criteria: Partial<Omit<User, 'type'>>
+    ): User[] {
+        return persons.filter(isUser).filter((user) => {
+            const criteriaKeys = Object.keys(criteria) as (keyof Omit<User, 'type'>)[];
+            return criteriaKeys.every((fieldName) => {
+                return user[fieldName] === criteria[fieldName];
+            });
+        });
+    }
+    
+    // Can filter by any combination of fields
+    filterUsers(persons, { age: 23 });
+    filterUsers(persons, { name: 'Max', age: 25 });
+    filterUsers(persons, { occupation: 'Astronaut' });
+    ```
+  </Tab>
+</Tabs>
+
+### Breaking Down the Solution
+
+Let's understand `Partial<Omit<User, 'type'>>` step by step:
+
+<Steps>
+  <Step title="Start with User">
+    ```typescript
+    interface User {
+        type: 'user';
+        name: string;
+        age: number;
+        occupation: string;
+    }
+    ```
+  </Step>
+  
+  <Step title="Apply Omit">
+    ```typescript
+    Omit<User, 'type'>
+    // Result:
+    // {
+    //   name: string;
+    //   age: number;
+    //   occupation: string;
+    // }
+    ```
+    Removes the 'type' field since you don't want to filter by it
+  </Step>
+  
+  <Step title="Apply Partial">
+    ```typescript
+    Partial<Omit<User, 'type'>>
+    // Result:
+    // {
+    //   name?: string;
+    //   age?: number;
+    //   occupation?: string;
+    // }
+    ```
+    Makes all remaining fields optional
+  </Step>
+</Steps>
+
+<Accordion title="Why exclude 'type' from criteria?">
+  The `type` field is a discriminant used to identify the object type. When filtering users, you already know they're users (after `persons.filter(isUser)`), so filtering by `type: 'user'` is redundant and could lead to mistakes.
+</Accordion>
+
+### Practical Usage
+
+```typescript
+const persons: Person[] = [
+    { type: 'user', name: 'Max Mustermann', age: 25, occupation: 'Chimney sweep' },
+    { type: 'user', name: 'Kate Müller', age: 23, occupation: 'Astronaut' },
+    { type: 'user', name: 'Wilson', age: 23, occupation: 'Ball' }
+];
+
+console.log('Users of age 23:');
+filterUsers(persons, { age: 23 }).forEach(logPerson);
+// Output:
+//  - Kate Müller, 23, Astronaut
+//  - Wilson, 23, Ball
+
+console.log('Astronauts:');
+filterUsers(persons, { occupation: 'Astronaut' }).forEach(logPerson);
+// Output:
+//  - Kate Müller, 23, Astronaut
+```
+
+### Other Useful Utility Types
+
+<CardGroup cols={2}>
+  <Card title="Pick<T, K>" icon="hand-pointer">
+    Select specific properties from a type
+    ```typescript
+    type UserName = Pick<User, 'name' | 'age'>;
+    ```
+  </Card>
+  
+  <Card title="Required<T>" icon="asterisk">
+    Makes all properties required
+    ```typescript
+    type CompleteUser = Required<PartialUser>;
+    ```
+  </Card>
+  
+  <Card title="Readonly<T>" icon="lock">
+    Makes all properties read-only
+    ```typescript
+    type ImmutableUser = Readonly<User>;
+    ```
+  </Card>
+  
+  <Card title="Record<K, T>" icon="table">
+    Creates an object type with keys K and values T
+    ```typescript
+    type UserMap = Record<string, User>;
+    ```
+  </Card>
+</CardGroup>
+
+### Combining Utility Types
+
+You can chain utility types for complex transformations:
+
+```typescript
+// Optional fields except 'name'
+type PartialExceptName = Partial<User> & Pick<User, 'name'>;
+
+// Required 'name' and 'age', optional others
+type RequiredNameAge = Partial<User> & Required<Pick<User, 'name' | 'age'>>;
+
+// Read-only partial user
+type ReadonlyPartialUser = Readonly<Partial<User>>;
+```
+
+<Tip>
+  Utility types compose well together. Think of them as building blocks for creating exactly the type you need.
+</Tip>
+
+### Type-Safe Object Keys
+
+Notice the type assertion for object keys:
+
+```typescript
+const criteriaKeys = Object.keys(criteria) as (keyof Omit<User, 'type'>)[];
+```
+
+<Accordion title="Why is this assertion needed?">
+  `Object.keys()` returns `string[]` because JavaScript objects can have string keys added at runtime. TypeScript plays it safe by returning the wider type.
+  
+  When you know the object's structure (like here with `criteria`), you can safely assert to the specific keys:
+  
+  ```typescript
+  // Object.keys returns: string[]
+  // We assert to: ('name' | 'age' | 'occupation')[]
+  ```
+  
+  This allows type-safe property access in the loop.
+</Accordion>
+
+### Common Patterns
+
+<CodeGroup>
+  ```typescript Filtering API
+  function filterUsers(
+      persons: Person[],
+      criteria: Partial<Omit<User, 'type'>>
+  ): User[] {
+      // Implementation
+  }
+  ```
+  
+  ```typescript Update API
+  function updateUser(
+      user: User,
+      updates: Partial<User>
+  ): User {
+      return { ...user, ...updates };
+  }
+  ```
+  
+  ```typescript Create API
+  function createUser(
+      data: Omit<User, 'id' | 'createdAt'>
+  ): User {
+      return {
+          id: generateId(),
+          createdAt: new Date(),
+          ...data
+      };
+  }
+  ```
+</CodeGroup>
+
+## What You Learned
+
+<AccordionGroup>
+  <Accordion title="Partial<T>">
+    Makes all properties optional, useful for filters, updates, and partial data
+  </Accordion>
+  
+  <Accordion title="Omit<T, K>">
+    Removes specific properties from a type, useful for excluding discriminants or auto-generated fields
+  </Accordion>
+  
+  <Accordion title="Type Composition">
+    Utility types can be combined to create precisely the types you need
+  </Accordion>
+  
+  <Accordion title="DRY Principle">
+    No need to duplicate type definitions - derive new types from existing ones
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Move on to [Generics](/exercises/generics) to learn how to create reusable, type-safe functions that work with any type.
+
+## Additional Resources
+
+- [TypeScript Handbook: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
+- [TypeScript Handbook: Partial](https://www.typescriptlang.org/docs/handbook/utility-types.html#partialtype)
+- [TypeScript Handbook: Omit](https://www.typescriptlang.org/docs/handbook/utility-types.html#omittype-keys)

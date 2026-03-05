@@ -1,0 +1,217 @@
+---
+title: Refining Types (Exercise 3)
+description: Master type narrowing with the 'in' operator to access specific properties of union types
+---
+
+## Exercise 3: Type Narrowing with the `in` Operator
+
+### Scenario
+
+You want to display additional information for each person - occupation for Users and role for Admins. However, TypeScript won't let you access these properties directly on a union type.
+
+### The Problem
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+interface Admin {
+    name: string;
+    age: number;
+    role: string;
+}
+
+export type Person = User | Admin;
+
+export function logPerson(person: Person) {
+    let additionalInformation: string;
+    if (person.role) {  // ❌ Error: Property 'role' doesn't exist on User
+        additionalInformation = person.role;
+    } else {
+        additionalInformation = person.occupation;  // ❌ Error: Property 'occupation' doesn't exist on Admin
+    }
+    console.log(` - ${person.name}, ${person.age}, ${additionalInformation}`);
+}
+```
+
+<Warning>
+  When working with union types, TypeScript only allows access to properties that exist on **all** members of the union. You must narrow the type first.
+</Warning>
+
+### Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Type Narrowing" icon="filter">
+    The process of refining a union type to a more specific type
+  </Card>
+  
+  <Card title="in Operator" icon="key">
+    Checks if a property exists on an object, narrowing the type accordingly
+  </Card>
+</CardGroup>
+
+### Understanding the `in` Operator
+
+The `in` operator is a type guard that checks for property existence:
+
+```typescript
+if ('role' in person) {
+    // TypeScript knows person is Admin here
+    person.role  // ✅ OK
+} else {
+    // TypeScript knows person is User here
+    person.occupation  // ✅ OK
+}
+```
+
+### Solution
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export function logPerson(person: Person) {
+        let additionalInformation: string;
+        if (person.role) {  // ❌ Error!
+            additionalInformation = person.role;
+        } else {
+            additionalInformation = person.occupation;  // ❌ Error!
+        }
+        console.log(` - ${person.name}, ${person.age}, ${additionalInformation}`);
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    export function logPerson(person: Person) {
+        let additionalInformation: string;
+        if ('role' in person) {
+            additionalInformation = person.role;  // person is Admin
+        } else {
+            additionalInformation = person.occupation;  // person is User
+        }
+        console.log(` - ${person.name}, ${person.age}, ${additionalInformation}`);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Why the Original Code Fails
+
+<Accordion title="What's wrong with if (person.role)?">
+  The check `if (person.role)` tries to access the `role` property before checking if it exists. TypeScript doesn't allow this on union types because:
+  
+  1. `person` could be a `User`, which doesn't have `role`
+  2. The property access itself would cause a compile error
+  
+  The `in` operator checks for property existence **without** accessing it, allowing TypeScript to narrow the type safely.
+</Accordion>
+
+### How Type Narrowing Works
+
+<Steps>
+  <Step title="Start with Union">
+    `person: Person` could be either `User` or `Admin`
+  </Step>
+  
+  <Step title="Check Property">
+    `'role' in person` checks if the property exists
+  </Step>
+  
+  <Step title="Type Narrowed">
+    Inside the `if` block, TypeScript narrows `person` to `Admin`
+  </Step>
+  
+  <Step title="Else Branch">
+    In the `else` block, TypeScript knows `person` must be `User`
+  </Step>
+</Steps>
+
+### Alternative Type Guards
+
+While the `in` operator works well here, TypeScript offers other type narrowing techniques:
+
+<CodeGroup>
+  ```typescript typeof
+  // For primitive types
+  if (typeof value === 'string') {
+      value.toUpperCase()  // value is string
+  }
+  ```
+  
+  ```typescript instanceof
+  // For class instances
+  if (error instanceof Error) {
+      error.message  // error is Error
+  }
+  ```
+  
+  ```typescript in operator
+  // For object properties
+  if ('role' in person) {
+      person.role  // person has role property
+  }
+  ```
+</CodeGroup>
+
+<Note>
+  You'll learn about **type predicates** in the next exercise, which provide even more control over type narrowing.
+</Note>
+
+### Common Pitfalls
+
+<Warning>
+  **Don't use optional chaining for type narrowing:**
+  
+  ```typescript
+  if (person.role) { }  // ❌ Compile error
+  if (person?.role) { }  // ❌ Still an error - TypeScript checks types at compile time
+  if ('role' in person) { }  // ✅ Correct - proper type guard
+  ```
+</Warning>
+
+### Real-World Example
+
+```typescript
+const persons: Person[] = [
+    { name: 'Max Mustermann', age: 25, occupation: 'Chimney sweep' },
+    { name: 'Jane Doe', age: 32, role: 'Administrator' },
+    { name: 'Kate Müller', age: 23, occupation: 'Astronaut' },
+    { name: 'Bruce Willis', age: 64, role: 'World saver' }
+];
+
+persons.forEach(logPerson);
+// Output:
+//  - Max Mustermann, 25, Chimney sweep
+//  - Jane Doe, 32, Administrator
+//  - Kate Müller, 23, Astronaut
+//  - Bruce Willis, 64, World saver
+```
+
+## What You Learned
+
+<AccordionGroup>
+  <Accordion title="The in Operator">
+    Use `'property' in object` to check for property existence and narrow types
+  </Accordion>
+  
+  <Accordion title="Control Flow Analysis">
+    TypeScript tracks type narrowing through if/else branches automatically
+  </Accordion>
+  
+  <Accordion title="Type Safety">
+    Type guards prevent runtime errors by ensuring properties exist before access
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Move on to [Union Types](/exercises/union-types) to learn about discriminated unions and type predicates for even more powerful type narrowing.
+
+## Additional Resources
+
+- [TypeScript Handbook: Narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)
+- [TypeScript Handbook: The in Operator](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#the-in-operator-narrowing)

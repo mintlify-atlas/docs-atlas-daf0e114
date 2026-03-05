@@ -1,0 +1,251 @@
+---
+title: Basic Typing (Exercises 1-2)
+description: Learn TypeScript fundamentals by defining interfaces and typing basic data structures
+---
+
+These exercises introduce the fundamentals of TypeScript by teaching you how to define interfaces and apply proper types to variables and functions.
+
+## Exercise 1: Defining Your First Interface
+
+### Scenario
+
+You're building a community platform and need to store user data. For performance reasons, the data is stored directly in code. Your task is to properly type this data structure.
+
+### The Problem
+
+The code has `unknown` types that need to be replaced with proper type definitions:
+
+```typescript
+export type User = unknown;
+
+export const users: unknown[] = [
+    {
+        name: 'Max Mustermann',
+        age: 25,
+        occupation: 'Chimney sweep'
+    },
+    {
+        name: 'Kate Müller',
+        age: 23,
+        occupation: 'Astronaut'
+    }
+];
+
+export function logPerson(user: unknown) {
+    console.log(` - ${user.name}, ${user.age}`);
+}
+```
+
+<Warning>
+  TypeScript will show errors because `unknown` type doesn't have `name` or `age` properties.
+</Warning>
+
+### Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Interfaces" icon="shapes">
+    Define the shape of an object with specific properties and their types
+  </Card>
+  
+  <Card title="Type Annotations" icon="tag">
+    Explicitly specify what type a variable, parameter, or return value should have
+  </Card>
+</CardGroup>
+
+### Solution
+
+Define a `User` interface with the appropriate properties:
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export type User = unknown;
+    
+    export const users: unknown[] = [
+        {
+            name: 'Max Mustermann',
+            age: 25,
+            occupation: 'Chimney sweep'
+        },
+        {
+            name: 'Kate Müller',
+            age: 23,
+            occupation: 'Astronaut'
+        }
+    ];
+    
+    export function logPerson(user: unknown) {
+        console.log(` - ${user.name}, ${user.age}`);
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    export interface User {
+        name: string;
+        age: number;
+        occupation: string;
+    }
+    
+    export const users: User[] = [
+        {
+            name: 'Max Mustermann',
+            age: 25,
+            occupation: 'Chimney sweep'
+        },
+        {
+            name: 'Kate Müller',
+            age: 23,
+            occupation: 'Astronaut'
+        }
+    ];
+    
+    export function logPerson(user: User) {
+        console.log(` - ${user.name}, ${user.age}`);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Accordion title="Why use interface instead of type?">
+  Both `interface` and `type` can define object shapes. Use `interface` when:
+  - Defining object structures
+  - You might extend it later
+  - Working with classes
+  
+  Use `type` when:
+  - Creating unions or intersections
+  - Using utility types
+  - Creating aliases for primitives
+</Accordion>
+
+---
+
+## Exercise 2: Working with Multiple Types
+
+### Scenario
+
+The community is growing! You're adding Admins alongside Users. Now you need to handle both types together.
+
+### The Problem
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+interface Admin {
+    name: string;
+    age: number;
+    role: string;
+}
+
+export type Person = unknown;
+
+export const persons: User[] /* <- Person[] */ = [
+    {
+        name: 'Max Mustermann',
+        age: 25,
+        occupation: 'Chimney sweep'
+    },
+    {
+        name: 'Jane Doe',
+        age: 32,
+        role: 'Administrator'
+    },
+    {
+        name: 'Kate Müller',
+        age: 23,
+        occupation: 'Astronaut'
+    },
+    {
+        name: 'Bruce Willis',
+        age: 64,
+        role: 'World saver'
+    }
+];
+
+export function logPerson(user: User) {
+    console.log(` - ${user.name}, ${user.age}`);
+}
+```
+
+<Note>
+  The array contains both Users (with `occupation`) and Admins (with `role`), but it's typed as `User[]` which causes errors.
+</Note>
+
+### Key Concepts
+
+**Union Types**: Represent a value that can be one of several types using the `|` operator.
+
+### Solution
+
+Create a union type that represents either a User or an Admin:
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export type Person = unknown;
+    
+    export const persons: User[] = [
+        { name: 'Max Mustermann', age: 25, occupation: 'Chimney sweep' },
+        { name: 'Jane Doe', age: 32, role: 'Administrator' },
+        { name: 'Kate Müller', age: 23, occupation: 'Astronaut' },
+        { name: 'Bruce Willis', age: 64, role: 'World saver' }
+    ];
+    
+    export function logPerson(user: User) {
+        console.log(` - ${user.name}, ${user.age}`);
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    export type Person = User | Admin;
+    
+    export const persons: Person[] = [
+        { name: 'Max Mustermann', age: 25, occupation: 'Chimney sweep' },
+        { name: 'Jane Doe', age: 32, role: 'Administrator' },
+        { name: 'Kate Müller', age: 23, occupation: 'Astronaut' },
+        { name: 'Bruce Willis', age: 64, role: 'World saver' }
+    ];
+    
+    export function logPerson(person: Person) {
+        console.log(` - ${person.name}, ${person.age}`);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### What You Learned
+
+<Steps>
+  <Step title="Union Types">
+    Use `|` to create a type that accepts multiple possibilities: `type Person = User | Admin`
+  </Step>
+  
+  <Step title="Common Properties">
+    Union types allow access to properties that exist on all members (like `name` and `age`)
+  </Step>
+  
+  <Step title="Type Safety">
+    TypeScript ensures you can only access properties that are guaranteed to exist
+  </Step>
+</Steps>
+
+<Tip>
+  Union types are the foundation for more advanced patterns like discriminated unions, which you'll learn in upcoming exercises.
+</Tip>
+
+## Next Steps
+
+Now that you understand basic interfaces and union types, move on to [Refining Types](/exercises/refining-types) to learn how to narrow union types and access specific properties.
+
+## Additional Resources
+
+- [TypeScript Handbook: Objects](https://www.typescriptlang.org/docs/handbook/2/objects.html)
+- [TypeScript Handbook: Union Types](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types)

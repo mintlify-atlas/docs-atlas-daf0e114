@@ -1,0 +1,487 @@
+---
+title: Generics (Exercises 6-10)
+description: Master generics to create reusable, type-safe functions and APIs
+---
+
+Generics enable you to write flexible, reusable code while maintaining type safety. These exercises progress from simple generic functions to advanced patterns like promisification.
+
+## Exercise 6: Function Overloads with Generics
+
+### Scenario
+
+You need `filterPersons` to return `User[]` when filtering users and `Admin[]` when filtering admins. The return type should match the `personType` parameter.
+
+### The Problem
+
+```typescript
+export function filterPersons(
+    persons: Person[], 
+    personType: string, 
+    criteria: unknown
+): unknown[] {
+    return persons
+        .filter((person) => person.type === personType)
+        .filter((person) => {
+            let criteriaKeys = Object.keys(criteria) as (keyof Person)[];
+            return criteriaKeys.every((fieldName) => {
+                return person[fieldName] === criteria[fieldName];
+            });
+        });
+}
+
+const users = filterPersons(persons, 'user', { age: 23 });  // unknown[]
+const admins = filterPersons(persons, 'admin', { age: 23 }); // unknown[]
+```
+
+<Warning>
+  The function returns `unknown[]` regardless of the `personType`, losing all type information.
+</Warning>
+
+### Key Concepts
+
+<CardGroup cols={2}>
+  <Card title="Function Overloads" icon="layer-group">
+    Multiple function signatures for different parameter combinations
+  </Card>
+  
+  <Card title="Type Correlation" icon="link">
+    Making return types depend on parameter values
+  </Card>
+</CardGroup>
+
+### Solution
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export function filterPersons(
+        persons: Person[], 
+        personType: string, 
+        criteria: unknown
+    ): unknown[] {
+        // Implementation
+    }
+    
+    const users = filterPersons(persons, 'user', { age: 23 });
+    // Type: unknown[]
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    // Overload signatures
+    export function filterPersons(
+        persons: Person[], 
+        personType: User['type'], 
+        criteria: Partial<Omit<User, 'type'>>
+    ): User[];
+    
+    export function filterPersons(
+        persons: Person[], 
+        personType: Admin['type'], 
+        criteria: Partial<Omit<Admin, 'type'>>
+    ): Admin[];
+    
+    // Implementation signature
+    export function filterPersons(
+        persons: Person[], 
+        personType: Person['type'], 
+        criteria: Partial<Person>
+    ): Person[] {
+        return persons
+            .filter((person) => person.type === personType)
+            .filter((person) => {
+                let criteriaKeys = getObjectKeys(criteria);
+                return criteriaKeys.every((fieldName) => {
+                    return person[fieldName] === criteria[fieldName];
+                });
+            });
+    }
+    
+    const users = filterPersons(persons, 'user', { age: 23 });  // User[]
+    const admins = filterPersons(persons, 'admin', { age: 23 }); // Admin[]
+    ```
+  </Tab>
+</Tabs>
+
+<Accordion title="Bonus: getObjectKeys helper">
+  Create a generic helper for type-safe object keys:
+  
+  ```typescript
+  const getObjectKeys = <T>(obj: T) => Object.keys(obj) as (keyof T)[];
+  
+  // Usage
+  const keys = getObjectKeys(criteria);  // ('name' | 'age' | 'occupation')[]
+  ```
+</Accordion>
+
+---
+
+## Exercise 7: Basic Generics with Tuples
+
+### Scenario
+
+Implement a `swap` function that takes two values and returns them in reverse order, preserving their types.
+
+### The Problem
+
+```typescript
+export function swap(v1, v2) {  // No types!
+    return [v2, v1];
+}
+
+const [admin, user] = swap(users[0], admins[1]);
+// Both have type 'any'
+```
+
+### Solution
+
+Use generics to capture and preserve input types:
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export function swap(v1, v2) {
+        return [v2, v1];
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    export function swap<T1, T2>(v1: T1, v2: T2): [T2, T1] {
+        return [v2, v1];
+    }
+    
+    // Usage
+    const [user, admin] = swap(admins[0], users[1]);
+    // user: User, admin: Admin
+    
+    const [str, num] = swap(123, 'Hello');
+    // str: string, num: number
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  Tuple types like `[T2, T1]` preserve the exact order and type of each element, unlike arrays which have a single element type.
+</Note>
+
+---
+
+## Exercise 8: Intersection Types with Generics
+
+### Scenario
+
+Create a `PowerUser` type that combines all fields from both `User` and `Admin` (except `type`).
+
+### The Problem
+
+```typescript
+type PowerUser = unknown;
+
+const powerUser: PowerUser = {
+    type: 'powerUser',
+    name: 'Nikki Stone',
+    age: 45,
+    role: 'Moderator',
+    occupation: 'Cat groomer'
+};
+```
+
+### Solution
+
+Use intersection types and `Omit` to merge interfaces:
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    type PowerUser = unknown;
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    type PowerUser = Omit<User, 'type'> & Omit<Admin, 'type'> & {
+        type: 'powerUser'
+    };
+    
+    // Equivalent to:
+    // {
+    //   type: 'powerUser';
+    //   name: string;
+    //   age: number;
+    //   occupation: string;  // from User
+    //   role: string;        // from Admin
+    // }
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Exercise 9: Generic API Response Type
+
+### Scenario
+
+Create a generic `ApiResponse<T>` type to handle success and error responses uniformly.
+
+### The Problem
+
+```typescript
+type AdminsApiResponse = (
+    { status: 'success'; data: Admin[]; } |
+    { status: 'error'; error: string; }
+);
+
+type UsersApiResponse = (
+    { status: 'success'; data: User[]; } |
+    { status: 'error'; error: string; }
+);
+
+// Duplication for every data type!
+```
+
+### Solution
+
+Create a generic type that works for any data:
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    // Duplicated for each type
+    type AdminsApiResponse = { status: 'success'; data: Admin[]; } | { status: 'error'; error: string; };
+    type UsersApiResponse = { status: 'success'; data: User[]; } | { status: 'error'; error: string; };
+    
+    export function requestAdmins(callback: (response: AdminsApiResponse) => void) {
+        // ...
+    }
+    
+    export function requestUsers(callback: (response: UsersApiResponse) => void) {
+        // ...
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    export type ApiResponse<T> =
+        | { status: 'success'; data: T; }
+        | { status: 'error'; error: string; };
+    
+    export function requestAdmins(
+        callback: (response: ApiResponse<Admin[]>) => void
+    ) {
+        callback({ status: 'success', data: admins });
+    }
+    
+    export function requestUsers(
+        callback: (response: ApiResponse<User[]>) => void
+    ) {
+        callback({ status: 'success', data: users });
+    }
+    
+    export function requestCurrentServerTime(
+        callback: (response: ApiResponse<number>) => void
+    ) {
+        callback({ status: 'success', data: Date.now() });
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Using Generic API Responses
+
+```typescript
+function startTheApp(callback: (error: Error | null) => void) {
+    requestAdmins((adminsResponse) => {
+        if (adminsResponse.status === 'success') {
+            adminsResponse.data.forEach(logPerson);  // data is Admin[]
+        } else {
+            return callback(new Error(adminsResponse.error));  // error is string
+        }
+        
+        requestUsers((usersResponse) => {
+            if (usersResponse.status === 'success') {
+                usersResponse.data.forEach(logPerson);  // data is User[]
+            } else {
+                return callback(new Error(usersResponse.error));
+            }
+        });
+    });
+}
+```
+
+---
+
+## Exercise 10: Advanced Generics - Promisify
+
+### Scenario
+
+Convert callback-based async functions to Promise-based ones, preserving type safety.
+
+### The Problem
+
+```typescript
+export function promisify(arg: unknown): unknown {
+    return null;
+}
+
+const api = {
+    requestAdmins: promisify(oldApi.requestAdmins),  // unknown
+    requestUsers: promisify(oldApi.requestUsers)     // unknown
+};
+```
+
+### Solution
+
+<Tabs>
+  <Tab title="Problem">
+    ```typescript
+    export function promisify(arg: unknown): unknown {
+        return null;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    ```typescript
+    type CallbackBasedAsyncFunction<T> = (
+        callback: (response: ApiResponse<T>) => void
+    ) => void;
+    
+    type PromiseBasedAsyncFunction<T> = () => Promise<T>;
+    
+    export function promisify<T>(
+        fn: CallbackBasedAsyncFunction<T>
+    ): PromiseBasedAsyncFunction<T> {
+        return () => new Promise<T>((resolve, reject) => {
+            fn((response) => {
+                if (response.status === 'success') {
+                    resolve(response.data);
+                } else {
+                    reject(new Error(response.error));
+                }
+            });
+        });
+    }
+    
+    const api = {
+        requestAdmins: promisify(oldApi.requestAdmins),    // () => Promise<Admin[]>
+        requestUsers: promisify(oldApi.requestUsers),      // () => Promise<User[]>
+        requestCurrentServerTime: promisify(oldApi.requestCurrentServerTime) // () => Promise<number>
+    };
+    ```
+  </Tab>
+</Tabs>
+
+### Using the Promisified API
+
+```typescript
+async function startTheApp() {
+    console.log('Admins:');
+    (await api.requestAdmins()).forEach(logPerson);
+    
+    console.log('Users:');
+    (await api.requestUsers()).forEach(logPerson);
+    
+    console.log('Server time:');
+    console.log(`   ${new Date(await api.requestCurrentServerTime()).toLocaleString()}`);
+}
+
+startTheApp().then(
+    () => console.log('Success!'),
+    (e: Error) => console.log(`Error: "${e.message}"`)
+);
+```
+
+<Accordion title="Bonus: PromisifyAll">
+  Create a function that promisifies all methods in an object:
+  
+  ```typescript
+  type SourceObject<T> = {[K in keyof T]: CallbackBasedAsyncFunction<T[K]>};
+  type PromisifiedObject<T> = {[K in keyof T]: PromiseBasedAsyncFunction<T[K]>};
+  
+  export function promisifyAll<T extends {[key: string]: any}>(
+      obj: SourceObject<T>
+  ): PromisifiedObject<T> {
+      const result: Partial<PromisifiedObject<T>> = {};
+      for (const key of Object.keys(obj) as (keyof T)[]) {
+          result[key] = promisify(obj[key]);
+      }
+      return result as PromisifiedObject<T>;
+  }
+  
+  // Usage
+  const api = promisifyAll(oldApi);
+  ```
+</Accordion>
+
+## Key Generic Patterns
+
+<CardGroup cols={2}>
+  <Card title="Single Generic" icon="1">
+    ```typescript
+    function identity<T>(value: T): T {
+        return value;
+    }
+    ```
+  </Card>
+  
+  <Card title="Multiple Generics" icon="2">
+    ```typescript
+    function pair<T, U>(first: T, second: U): [T, U] {
+        return [first, second];
+    }
+    ```
+  </Card>
+  
+  <Card title="Generic Constraints" icon="link">
+    ```typescript
+    function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
+        return obj[key];
+    }
+    ```
+  </Card>
+  
+  <Card title="Generic Types" icon="box">
+    ```typescript
+    type ApiResponse<T> = 
+        | { success: true; data: T }
+        | { success: false; error: string };
+    ```
+  </Card>
+</CardGroup>
+
+## What You Learned
+
+<AccordionGroup>
+  <Accordion title="Function Overloads">
+    Define multiple type signatures for functions that behave differently based on parameters
+  </Accordion>
+  
+  <Accordion title="Generic Functions">
+    Create reusable functions that work with any type while preserving type safety
+  </Accordion>
+  
+  <Accordion title="Generic Types">
+    Define flexible type structures that can wrap any data type
+  </Accordion>
+  
+  <Accordion title="Type Transformations">
+    Convert between different function signatures while maintaining types
+  </Accordion>
+  
+  <Accordion title="Mapped Types">
+    Transform all properties in an object type systematically
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Continue to [Type Declarations](/exercises/type-declarations) to learn how to write declaration files for JavaScript libraries.
+
+## Additional Resources
+
+- [TypeScript Handbook: Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html)
+- [TypeScript Handbook: Function Overloads](https://www.typescriptlang.org/docs/handbook/2/functions.html#function-overloads)

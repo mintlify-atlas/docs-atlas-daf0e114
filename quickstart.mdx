@@ -1,80 +1,286 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with TypeScript Exercises in minutes - access the platform, complete your first exercise, and learn how to navigate between challenges
 ---
 
-## Get started in three steps
+# Quickstart Guide
 
-Get your documentation site running locally and make your first customization.
+Get up and running with TypeScript Exercises in just a few minutes. This guide will walk you through accessing the platform, understanding the interface, and completing your first exercise.
 
-### Step 1: Set up your local environment
+## Accessing the Platform
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+TypeScript Exercises runs entirely in your browser - no installation required!
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Open the platform">
+    Navigate to [https://typescript-exercises.github.io/](https://typescript-exercises.github.io/) in a modern web browser (Chrome, Firefox, or Safari recommended).
+  </Step>
+  
+  <Step title="Wait for initialization">
+    The platform will load the Monaco Editor and TypeScript compiler. This may take a few seconds on first load.
+  </Step>
+  
+  <Step title="Start with Exercise 1">
+    You'll automatically land on Exercise 1, which introduces basic TypeScript typing concepts.
+  </Step>
+</Steps>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+<Info>
+No account creation or sign-in required. Your progress is automatically saved in your browser's local storage.
+</Info>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Understanding the Interface
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+The platform interface is divided into several key areas:
 
-### Step 3: Go live
+```
++--------------------------------------------------------------+
+| TypeScript exercises                           [Theme Toggle] |
++--------------------------------------------------------------+
+| Exercises 1·2·3·4...   << Navigate through exercises >>     |
++---------------+----------------------------------------------+
+| Files         | file.ts   << Filename and status >>         |
++---------------+----------------------------------------------+
+| file.ts       | 1  import {x} from 'y';                     |
+| dir           | 2                                           |
+|   sub.ts      | 3                                           |
+|               |                                             |
+| << File tree  |   << Code editor (Monaco) >>                |
+|    sidebar >> |                                             |
+|               +----------------------------------------------+
+|               |                                             |
+|               |   << Errors or completion status >>         |
+|               |                                             |
++---------------+----------------------------------------------+
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
+### Key Interface Elements
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Header" icon="bars">
+    Contains the navigation bar with exercise numbers and theme toggle
+  </Card>
+  
+  <Card title="File Sidebar" icon="folder-tree">
+    Shows the file structure for the current exercise. Click files to switch between them.
+  </Card>
+  
+  <Card title="Code Editor" icon="code">
+    Monaco Editor where you write your TypeScript code with full IDE features
+  </Card>
+  
+  <Card title="Error Panel" icon="triangle-exclamation">
+    Displays TypeScript errors that need fixing, or "Completed" when all tests pass
+  </Card>
 </CardGroup>
 
+## Completing Your First Exercise
+
+Let's walk through Exercise 1 step by step.
+
+<Steps>
+  <Step title="Read the exercise description">
+    Exercise 1 starts with detailed instructions in the comments. Here's what you'll see:
+    
+    From `src/exercises/1/index.ts:63-75`:
+    ```typescript
+    /*
+    Intro:
+    
+        We are starting a small community of users. For performance
+        reasons, we have decided to store all users right in the code.
+        This way we can provide our developers with more
+        user-interaction opportunities. With user-related data, at least.
+        All the GDPR-related issues will be solved some other day.
+        This would be the basis for our future experiments during
+        these exercises.
+    
+    Exercise:
+    
+        Given the data, define the interface "User" and use it accordingly.
+    */
+    ```
+  </Step>
+  
+  <Step title="Examine the starter code">
+    You'll see code with TypeScript errors:
+    
+    From `src/exercises/1/index.ts:79-96`:
+    ```typescript
+    export type User = unknown;
+    
+    export const users: unknown[] = [
+        {
+            name: 'Max Mustermann',
+            age: 25,
+            occupation: 'Chimney sweep'
+        },
+        {
+            name: 'Kate Müller',
+            age: 23,
+            occupation: 'Astronaut'
+        }
+    ];
+    
+    export function logPerson(user: unknown) {
+        console.log(` - ${user.name}, ${user.age}`);
+    }
+    ```
+  </Step>
+  
+  <Step title="Check the error panel">
+    The bottom panel will show TypeScript errors. These tell you what needs to be fixed.
+  </Step>
+  
+  <Step title="Fix the types">
+    Replace `unknown` types with proper TypeScript definitions:
+    
+    - Define a `User` interface with `name`, `age`, and `occupation` properties
+    - Update the `users` array type from `unknown[]` to `User[]`
+    - Update the `logPerson` parameter from `unknown` to `User`
+  </Step>
+  
+  <Step title="Watch errors disappear">
+    As you type, the platform validates your code in real-time. When all errors are fixed, you'll see "Completed" in the bottom panel.
+  </Step>
+  
+  <Step title="Move to next exercise">
+    Click the "Next exercise" button to proceed to Exercise 2.
+  </Step>
+</Steps>
+
+<Tip>
+The platform uses strict TypeScript compiler options. All exercises expect you to write type-safe code without using `any`.
+</Tip>
+
+## Understanding the Test System
+
+Each exercise includes a `test.ts` file (marked as read-only) that validates your solution.
+
+From `src/exercises/1/test.ts:1-6`:
+```typescript
+import {IsTypeEqual, typeAssert} from 'type-assertions';
+import {User, logPerson, users} from './index';
+
+typeAssert<IsTypeEqual<User, {name: string, age: number, occupation: string}>>();
+typeAssert<IsTypeEqual<typeof users, {name: string, age: number, occupation: string}[]>>();
+typeAssert<IsTypeEqual<typeof logPerson, (user: {name: string, age: number, occupation: string}) => void>>();
+```
+
+These type assertions ensure your types match the expected solution exactly.
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+You can view test files by clicking on them in the file sidebar, but you cannot modify them. They define the requirements your solution must meet.
 </Note>
+
+## Navigating Between Exercises
+
+### Using the Exercise Navigation Bar
+
+Click on exercise numbers at the top of the page to jump to any exercise:
+- **Numbered circles** - Click to navigate to that exercise
+- **Highlighted exercises** - Indicates which exercises you've completed
+- **Current exercise** - Shown with distinct styling
+
+### Using Next/Previous Buttons
+
+- **"Next exercise" button** - Appears when you complete an exercise
+- **Manual navigation** - You can skip ahead or go back at any time
+
+<Info>
+Your progress is saved automatically. You can close the browser and return later to continue where you left off.
+</Info>
+
+## Working with Multiple Files
+
+Some exercises have multiple editable files:
+
+<Accordion title="Exercise 11-13: Type Declarations and Module Augmentation">
+  These exercises include:
+  - `index.ts` (read-only) - Main code that uses external libraries
+  - `declarations/**/*.d.ts` - Type declaration files you need to write
+  - `node_modules/*` (read-only) - Simulated JavaScript libraries
+  - `test.ts` (read-only) - Type assertions to validate your solution
+  
+  Navigate between files using the file tree sidebar on the left.
+</Accordion>
+
+## Getting Unstuck
+
+If you're having trouble with an exercise:
+
+<CardGroup cols={2}>
+  <Card title="View Solution" icon="lightbulb">
+    Click "show a possible solution" to see a reference implementation
+  </Card>
+  
+  <Card title="Skip Exercise" icon="forward">
+    Click "skip" to move to the next exercise without completing the current one
+  </Card>
+  
+  <Card title="Compare Solutions" icon="code-compare">
+    After completing an exercise, click "Compare my solution" to see differences
+  </Card>
+  
+  <Card title="Check Documentation" icon="book">
+    Each exercise includes links to relevant TypeScript documentation
+  </Card>
+</CardGroup>
+
+From `src/exercises/1/index.ts:102-103`:
+```typescript
+// In case you are stuck:
+// https://www.typescriptlang.org/docs/handbook/2/objects.html
+```
+
+## Development Mode (Optional)
+
+If you want to run the platform locally:
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/typescript-exercises/typescript-exercises.git
+    cd typescript-exercises
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    yarn install
+    ```
+  </Step>
+  
+  <Step title="Start development server">
+    From `package.json:63`:
+    ```bash
+    yarn start
+    ```
+    
+    The platform will open at `http://localhost:3000`
+  </Step>
+</Steps>
+
+## Next Steps
+
+<Card title="How It Works" icon="gears" href="/how-it-works">
+  Learn about the platform architecture, Monaco Editor integration, and how the test system validates your solutions
+</Card>
+
+## Tips for Success
+
+<Tip>
+**Use TypeScript documentation** - Each exercise links to relevant TypeScript docs. Don't hesitate to reference them!
+</Tip>
+
+<Tip>
+**Think about types, not runtime** - Focus on what TypeScript knows at compile time, not what happens when the code runs.
+</Tip>
+
+<Tip>
+**Avoid `any`** - The exercises teach proper type usage. If you find yourself reaching for `any`, there's likely a better solution.
+</Tip>
+
+<Tip>
+**Take breaks** - Difficulty increases quickly. If you're stuck, take a break and come back with fresh eyes.
+</Tip>

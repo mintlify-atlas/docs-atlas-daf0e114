@@ -1,0 +1,259 @@
+---
+title: 'Development Setup'
+description: 'Get your local environment ready to contribute to TypeScript Exercises'
+---
+
+# Development Setup
+
+This guide will help you set up your local development environment for contributing to TypeScript Exercises.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    Version 12 or higher (as specified in package.json)
+  </Card>
+  
+  <Card title="Yarn" icon="yarn">
+    Yarn package manager (recommended) or npm
+  </Card>
+  
+  <Card title="Git" icon="git">
+    For cloning and version control
+  </Card>
+  
+  <Card title="Code Editor" icon="code">
+    VS Code recommended for TypeScript development
+  </Card>
+</CardGroup>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Fork and Clone the Repository">
+    Fork the repository on GitHub and clone it to your local machine:
+    
+    <CodeGroup>
+    ```bash SSH
+    git clone git@github.com:YOUR_USERNAME/typescript-exercises.git
+    cd typescript-exercises
+    ```
+    
+    ```bash HTTPS
+    git clone https://github.com/YOUR_USERNAME/typescript-exercises.git
+    cd typescript-exercises
+    ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Install Dependencies">
+    Install all project dependencies using Yarn:
+    
+    <CodeGroup>
+    ```bash Yarn
+    yarn install
+    ```
+    
+    ```bash NPM
+    npm install
+    ```
+    </CodeGroup>
+    
+    <Note>
+    The project uses Yarn by default (as mentioned in README.md). Using Yarn is recommended for consistency.
+    </Note>
+  </Step>
+  
+  <Step title="Start the Development Server">
+    Launch the development server to see the exercises in action:
+    
+    ```bash
+    yarn start
+    ```
+    
+    This runs `EXTEND_ESLINT=true react-app-rewired start` and opens the application at `http://localhost:3000`
+    
+    <Warning>
+    The development server uses `react-app-rewired` with extended ESLint configuration. Make sure all dependencies are properly installed.
+    </Warning>
+  </Step>
+  
+  <Step title="Verify Your Setup">
+    Once the server is running, you should see the TypeScript Exercises interface. Try navigating through different exercises to ensure everything works correctly.
+  </Step>
+</Steps>
+
+## Available Scripts
+
+The project includes several npm scripts for development:
+
+### Development & Build
+
+<CodeGroup>
+```bash Start Development Server
+yarn start
+# Starts the development server with hot reloading
+# Uses EXTEND_ESLINT=true react-app-rewired start
+```
+
+```bash Build for Production
+yarn build
+# Creates an optimized production build
+# Uses EXTEND_ESLINT=true react-app-rewired build
+```
+</CodeGroup>
+
+### Linting & Code Quality
+
+<CodeGroup>
+```bash Run Linter
+yarn lint
+# Checks TypeScript and TSX files for lint errors
+# Runs: eslint 'src/**/*.ts{,x}'
+```
+
+```bash Auto-fix Lint Issues
+yarn lint-fix
+# Automatically fixes fixable lint errors
+# Runs: eslint --fix 'src/**/*.ts{,x}'
+```
+</CodeGroup>
+
+<Note>
+The project uses **Husky** for Git hooks. A pre-commit hook automatically runs `npm run lint` before each commit to ensure code quality.
+</Note>
+
+### Advanced
+
+```bash Eject Configuration
+yarn eject
+# ⚠️ One-way operation - use with caution!
+# Ejects react-app-rewired configuration
+```
+
+<Warning>
+Do NOT run `yarn eject` unless you have a specific need to customize the build configuration. This is a one-way operation that cannot be undone.
+</Warning>
+
+## Key Technologies
+
+The project is built with the following technologies:
+
+<AccordionGroup>
+  <Accordion title="Core Framework">
+    - **React** (v16.13.1) - UI library
+    - **TypeScript** (~3.7.2) - Type-safe JavaScript
+    - **React Scripts** (v4.0.3) - Build tooling
+    - **React App Rewired** - Custom build configuration
+  </Accordion>
+  
+  <Accordion title="Code Editor">
+    - **Monaco Editor** (v0.20.0) - VS Code-based code editor
+    - **Monaco Editor Webpack Plugin** - Integration with build system
+  </Accordion>
+  
+  <Accordion title="Linting & Formatting">
+    - **ESLint** (v7.11.0) - Code linting
+    - **@typescript-eslint** (v4.28.2) - TypeScript-specific rules
+    - **Prettier** (v2.3.2) - Code formatting
+    - **Husky** (v4.2.5) - Git hooks for pre-commit linting
+  </Accordion>
+  
+  <Accordion title="State & Utilities">
+    - **RxJS** (v6.5.5) - Reactive programming
+    - **Emotion** - CSS-in-JS styling
+    - **React Redux** - State management (if needed)
+  </Accordion>
+</AccordionGroup>
+
+## TypeScript Configuration
+
+The project uses strict TypeScript settings:
+
+```json tsconfig.json highlights
+{
+  "compilerOptions": {
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "target": "es5",
+    "module": "esnext",
+    "jsx": "react"
+  },
+  "exclude": [
+    "src/exercises"
+  ]
+}
+```
+
+<Note>
+The `src/exercises` directory is excluded from the main TypeScript compilation. Each exercise has its own isolated type checking.
+</Note>
+
+## Exercise Structure
+
+Exercises are located in `src/exercises/[number]/`:
+
+```
+src/exercises/
+├── 1/
+│   ├── index.ts           # Exercise starter code
+│   ├── index.solution.ts  # Solution code
+│   └── test.ts           # Test cases
+├── 2/
+│   ├── index.ts
+│   ├── index.solution.ts
+│   └── test.ts
+└── ...
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port 3000 already in use">
+    If port 3000 is already in use, you can specify a different port:
+    
+    ```bash
+    PORT=3001 yarn start
+    ```
+  </Accordion>
+  
+  <Accordion title="ESLint errors on start">
+    Make sure your code follows the project's linting rules:
+    
+    ```bash
+    yarn lint-fix
+    ```
+    
+    Some errors may need manual fixing.
+  </Accordion>
+  
+  <Accordion title="TypeScript compilation errors">
+    Clear the TypeScript cache and reinstall dependencies:
+    
+    ```bash
+    rm -rf node_modules
+    yarn install
+    ```
+  </Accordion>
+  
+  <Accordion title="Monaco Editor not loading">
+    The Monaco Editor requires specific webpack configuration. Make sure `monaco-editor-webpack-plugin` is properly installed and configured in `config-overrides.js`.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that your environment is set up:
+
+<CardGroup cols={2}>
+  <Card title="Read the Guidelines" icon="book" href="/contributing/guidelines">
+    Learn about code style and contribution standards
+  </Card>
+  
+  <Card title="Explore Exercises" icon="compass">
+    Navigate through existing exercises to understand the structure
+  </Card>
+</CardGroup>

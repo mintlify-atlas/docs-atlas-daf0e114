@@ -1,0 +1,331 @@
+---
+title: 'Interfaces'
+description: 'Master interface definitions, extension patterns, and when to use interfaces vs types in TypeScript'
+---
+
+## What are Interfaces?
+
+Interfaces in TypeScript define the structure of objects, describing what properties and methods an object should have. They serve as contracts that enforce type safety across your codebase.
+
+### Basic Interface Definition
+
+From [Exercise 1](/exercises/basic-typing), here's a simple interface definition:
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+const users: User[] = [
+    {
+        name: 'Max Mustermann',
+        age: 25,
+        occupation: 'Chimney sweep'
+    },
+    {
+        name: 'Kate Müller',
+        age: 23,
+        occupation: 'Astronaut'
+    }
+];
+
+function logPerson(user: User) {
+    console.log(` - ${user.name}, ${user.age}`);
+}
+```
+
+<Note>
+Interfaces provide compile-time type checking without adding any runtime overhead. They completely disappear during compilation to JavaScript.
+</Note>
+
+## Interface Extension
+
+Interfaces can extend other interfaces to create more specific types:
+
+```typescript
+interface Person {
+    name: string;
+    age: number;
+}
+
+interface User extends Person {
+    occupation: string;
+}
+
+interface Admin extends Person {
+    role: string;
+}
+```
+
+### Multiple Extensions
+
+An interface can extend multiple interfaces:
+
+```typescript
+interface Nameable {
+    name: string;
+}
+
+interface Ageable {
+    age: number;
+}
+
+interface Person extends Nameable, Ageable {
+    type: string;
+}
+```
+
+## Interfaces vs Types
+
+<Tabs>
+  <Tab title="Interfaces">
+    ```typescript
+    interface User {
+        name: string;
+        age: number;
+    }
+
+    // Can be extended
+    interface Employee extends User {
+        employeeId: string;
+    }
+
+    // Can be reopened (declaration merging)
+    interface User {
+        email?: string;
+    }
+    ```
+  </Tab>
+  <Tab title="Types">
+    ```typescript
+    type User = {
+        name: string;
+        age: number;
+    }
+
+    // Can use intersection
+    type Employee = User & {
+        employeeId: string;
+    }
+
+    // Cannot be reopened
+    // type User = { ... } // Error!
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+**When to use Interfaces:**
+- Defining object shapes that might be extended
+- Working with classes
+- When you need declaration merging
+- Public APIs where consumers might want to extend types
+
+**When to use Types:**
+- Union types: `type Status = 'pending' | 'active' | 'inactive'`
+- Complex type compositions
+- Mapped types and conditional types
+- Primitive aliases
+</Tip>
+
+## Practical Patterns
+
+### Optional Properties
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+    occupation?: string;  // Optional property
+}
+
+const user: User = {
+    name: 'John',
+    age: 30
+    // occupation is optional
+};
+```
+
+### Readonly Properties
+
+```typescript
+interface User {
+    readonly id: string;
+    name: string;
+    age: number;
+}
+
+const user: User = {
+    id: 'user-123',
+    name: 'John',
+    age: 30
+};
+
+// user.id = 'new-id'; // Error: Cannot assign to 'id' because it is a read-only property
+```
+
+### Index Signatures
+
+When you don't know all property names ahead of time:
+
+```typescript
+interface UserPreferences {
+    theme: 'light' | 'dark';
+    [key: string]: any;  // Allows additional properties
+}
+
+const prefs: UserPreferences = {
+    theme: 'dark',
+    fontSize: 14,
+    notifications: true
+};
+```
+
+### Function Interfaces
+
+Interfaces can describe function types:
+
+```typescript
+interface FilterFunction {
+    (person: Person, criteria: Partial<Person>): boolean;
+}
+
+const matchesCriteria: FilterFunction = (person, criteria) => {
+    return Object.keys(criteria).every(
+        key => person[key] === criteria[key]
+    );
+};
+```
+
+## Declaration Merging
+
+One unique feature of interfaces is that multiple declarations with the same name automatically merge:
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+}
+
+interface User {
+    email: string;
+}
+
+// Merged interface has all properties
+const user: User = {
+    name: 'John',
+    age: 30,
+    email: 'john@example.com'
+};
+```
+
+<Warning>
+While declaration merging is powerful, use it carefully. It can make code harder to understand if overused. It's most useful when augmenting third-party types.
+</Warning>
+
+## Interface with Literal Types
+
+From [Exercise 4](/exercises/union-types), interfaces can use literal types for discriminated unions:
+
+```typescript
+interface User {
+    type: 'user';  // Literal type
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+interface Admin {
+    type: 'admin';  // Literal type
+    name: string;
+    age: number;
+    role: string;
+}
+
+type Person = User | Admin;
+
+// TypeScript can discriminate based on the 'type' field
+function getInfo(person: Person) {
+    if (person.type === 'user') {
+        return person.occupation;  // TypeScript knows this is User
+    } else {
+        return person.role;  // TypeScript knows this is Admin
+    }
+}
+```
+
+## Best Practices
+
+<Accordion title="Prefer specific names over generic ones">
+  Instead of `IUser` or `UserInterface`, just use `User`. TypeScript conventions have moved away from prefixes like `I`.
+
+  ```typescript
+  // Good
+  interface User { ... }
+  
+  // Avoid
+  interface IUser { ... }
+  interface UserInterface { ... }
+  ```
+</Accordion>
+
+<Accordion title="Keep interfaces focused and cohesive">
+  Each interface should represent a single, well-defined concept:
+
+  ```typescript
+  // Good - Focused interfaces
+  interface User {
+      name: string;
+      email: string;
+  }
+
+  interface UserPermissions {
+      canEdit: boolean;
+      canDelete: boolean;
+  }
+
+  // Less ideal - Mixed concerns
+  interface User {
+      name: string;
+      email: string;
+      canEdit: boolean;
+      canDelete: boolean;
+  }
+  ```
+</Accordion>
+
+<Accordion title="Use readonly for immutable properties">
+  Mark properties as `readonly` when they shouldn't change after initialization:
+
+  ```typescript
+  interface User {
+      readonly id: string;
+      name: string;
+      age: number;
+  }
+  ```
+</Accordion>
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Type Guards" icon="shield-check" href="/concepts/type-guards">
+    Learn how to narrow union types with type predicates
+  </Card>
+  <Card title="Utility Types" icon="wrench" href="/concepts/utility-types">
+    Transform interfaces with Partial, Pick, Omit, and more
+  </Card>
+  <Card title="Generics" icon="code" href="/concepts/generics-advanced">
+    Make interfaces reusable with generic type parameters
+  </Card>
+  <Card title="Exercise 1" icon="dumbbell" href="/exercises/basic-typing">
+    Practice defining and using basic interfaces
+  </Card>
+</CardGroup>
+
+## Further Reading
+
+- [TypeScript Handbook: Object Types](https://www.typescriptlang.org/docs/handbook/2/objects.html)
+- [TypeScript Handbook: Interfaces](https://www.typescriptlang.org/docs/handbook/interfaces.html)

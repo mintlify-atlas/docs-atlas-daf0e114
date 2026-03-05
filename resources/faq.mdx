@@ -1,0 +1,642 @@
+---
+title: Frequently Asked Questions
+description: Common questions and troubleshooting help for TypeScript exercises
+---
+
+Answers to common questions about completing the TypeScript exercises and understanding TypeScript concepts.
+
+## Getting Started
+
+<Accordion title="What TypeScript version should I use?">
+The exercises are designed to work with modern TypeScript versions (4.x and above). It's recommended to use the latest stable version for the best experience and latest features.
+
+Check your TypeScript version:
+```bash
+tsc --version
+```
+
+Update TypeScript:
+```bash
+npm install -g typescript@latest
+```
+</Accordion>
+
+<Accordion title="How do I run the exercises?">
+The exercises can be run using the development server:
+
+```bash
+yarn start
+```
+
+This starts a development server that shows your progress and highlights type errors in real-time.
+</Accordion>
+
+<Accordion title="Can I skip exercises?">
+It's strongly recommended **not** to skip exercises. Each exercise builds upon concepts from previous ones. The difficulty grows progressively, so skipping ahead may leave gaps in your understanding.
+
+If you're stuck on an exercise, check:
+1. The documentation link at the bottom of the exercise
+2. The solution file (`index.solution.ts`) for hints
+3. The [Tips & Best Practices](/resources/tips) page
+</Accordion>
+
+<Accordion title="Where can I see the solutions?">
+Each exercise directory contains an `index.solution.ts` file showing the correct solution. However, try to solve each exercise on your own first before looking at the solution. The learning happens in the struggle!
+</Accordion>
+
+## Type System Questions
+
+<Accordion title="Why can't I use 'any'?">
+The `any` type disables TypeScript's type checking, defeating the entire purpose of using TypeScript. It's explicitly forbidden in these exercises (Rule #1).
+
+Using `any` is like telling TypeScript "I don't care about types here," which:
+- Removes type safety
+- Hides potential bugs
+- Makes refactoring dangerous
+- Provides no IDE autocomplete
+
+**Instead of `any`, use:**
+
+```typescript
+// For truly unknown types
+let value: unknown;
+
+// For generic types
+function identity<T>(arg: T): T {
+    return arg;
+}
+
+// For union types
+type StringOrNumber = string | number;
+```
+</Accordion>
+
+<Accordion title="What's the difference between 'interface' and 'type'?">
+Both can define object shapes, but they have subtle differences:
+
+**Interfaces:**
+- Can be extended and implemented
+- Can be reopened (declaration merging)
+- Better for object-oriented patterns
+
+```typescript
+interface User {
+    name: string;
+}
+
+interface User {
+    age: number; // Merges with above
+}
+
+interface Admin extends User {
+    role: string;
+}
+```
+
+**Type Aliases:**
+- More flexible (unions, intersections, primitives)
+- Cannot be reopened
+- Better for complex type operations
+
+```typescript
+type StringOrNumber = string | number;
+
+type User = {
+    name: string;
+    age: number;
+};
+
+type Admin = User & {
+    role: string;
+};
+```
+
+<Tip>
+For the exercises, either works in most cases. Use what feels natural for the problem at hand.
+</Tip>
+</Accordion>
+
+<Accordion title="What does 'unknown' mean and when should I use it?">
+`unknown` is the type-safe counterpart of `any`. It represents a value of unknown type, but unlike `any`, you must narrow it before using it.
+
+```typescript
+let value: unknown;
+
+// Error: Object is of type 'unknown'
+console.log(value.toString());
+
+// Correct: Narrow the type first
+if (typeof value === 'string') {
+    console.log(value.toString()); // OK
+}
+```
+
+**Use `unknown` when:**
+- Receiving data from external sources (APIs, user input)
+- You genuinely don't know the type yet
+- Writing generic utility functions
+
+In the exercises, you'll often replace `unknown` with proper types as part of the solution.
+</Accordion>
+
+<Accordion title="How do type guards work?">
+Type guards are expressions that perform runtime checks and inform TypeScript's type system. They're essential for working with union types.
+
+**Built-in type guards:**
+
+```typescript
+// typeof guard
+if (typeof value === 'string') {
+    value.toUpperCase(); // TypeScript knows it's string
+}
+
+// instanceof guard
+if (value instanceof Date) {
+    value.getTime(); // TypeScript knows it's Date
+}
+
+// 'in' operator guard (Exercise 3)
+if ('role' in person) {
+    person.role; // TypeScript knows it's Admin
+}
+```
+
+**Custom type guards (Exercise 4):**
+
+```typescript
+function isAdmin(person: Person): person is Admin {
+    return person.type === 'admin';
+}
+
+if (isAdmin(person)) {
+    console.log(person.role); // Type narrowed to Admin
+}
+```
+
+The `person is Admin` syntax is a **type predicate** that tells TypeScript to narrow the type.
+</Accordion>
+
+<Accordion title="What are utility types and why should I use them?">
+Utility types are built-in TypeScript types that perform common type transformations. They help you avoid duplicating type definitions.
+
+**Common utility types:**
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+    email: string;
+}
+
+// Make all properties optional
+type PartialUser = Partial<User>;
+// { name?: string; age?: number; email?: string }
+
+// Make all properties required
+type RequiredUser = Required<Partial<User>>;
+
+// Pick specific properties (Exercise 5)
+type UserPreview = Pick<User, 'name' | 'age'>;
+// { name: string; age: number }
+
+// Omit specific properties (Exercise 8)
+type UserWithoutEmail = Omit<User, 'email'>;
+// { name: string; age: number }
+
+// Make all properties readonly
+type ReadonlyUser = Readonly<User>;
+```
+
+**Why use them?**
+- DRY (Don't Repeat Yourself) principle
+- Automatic updates when source types change
+- Express intent clearly
+- Leverage TypeScript's built-in optimizations
+</Accordion>
+
+## Exercise-Specific Questions
+
+<Accordion title="Exercise 3: How do I check if a property exists on a union type?">
+Use the `in` operator to check if a property exists on an object:
+
+```typescript
+type Person = User | Admin;
+
+function logPerson(person: Person) {
+    if ('role' in person) {
+        // TypeScript knows person is Admin here
+        console.log(person.role);
+    } else {
+        // TypeScript knows person is User here
+        console.log(person.occupation);
+    }
+}
+```
+
+Read more: [Narrowing with 'in' operator](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#the-in-operator-narrowing)
+</Accordion>
+
+<Accordion title="Exercise 5: How do I make properties optional?">
+Use the `Partial<T>` utility type to make all properties optional:
+
+```typescript
+interface User {
+    name: string;
+    age: number;
+    occupation: string;
+}
+
+// All properties become optional
+type UserCriteria = Partial<User>;
+
+// Now this is valid:
+const criteria: UserCriteria = {
+    age: 23 // name and occupation are optional
+};
+```
+
+For the bonus exercise, combine with `Omit` to exclude specific properties:
+
+```typescript
+type UserCriteria = Partial<Omit<User, 'type'>>;
+```
+</Accordion>
+
+<Accordion title="Exercise 7: How do I create a generic function with multiple type parameters?">
+Use angle brackets with comma-separated type parameters:
+
+```typescript
+function swap<T, U>(v1: T, v2: U): [U, T] {
+    return [v2, v1];
+}
+
+// TypeScript infers types automatically:
+const [a, b] = swap(1, 'hello');
+// a is string, b is number
+```
+
+Read more: [Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html)
+</Accordion>
+
+<Accordion title="Exercise 8: How do I combine properties from multiple types?">
+Use intersection types with the `&` operator:
+
+```typescript
+interface User {
+    type: 'user';
+    name: string;
+    occupation: string;
+}
+
+interface Admin {
+    type: 'admin';
+    name: string;
+    role: string;
+}
+
+// Combine both, excluding 'type' and adding new type
+type PowerUser = Omit<User, 'type'> & Omit<Admin, 'type'> & {
+    type: 'powerUser';
+};
+```
+
+This gives PowerUser all properties from both User and Admin (except the original `type` field).
+</Accordion>
+
+<Accordion title="Exercise 10: How do I promisify a callback-based function?">
+Create a generic function that wraps the callback-based function and returns a Promise:
+
+```typescript
+type ApiResponse<T> = 
+    | { status: 'success'; data: T }
+    | { status: 'error'; error: string };
+
+function promisify<T>(
+    fn: (callback: (response: ApiResponse<T>) => void) => void
+): () => Promise<T> {
+    return () => {
+        return new Promise((resolve, reject) => {
+            fn((response) => {
+                if (response.status === 'success') {
+                    resolve(response.data);
+                } else {
+                    reject(new Error(response.error));
+                }
+            });
+        });
+    };
+}
+```
+
+The key is using generics to preserve type information through the transformation.
+</Accordion>
+
+<Accordion title="Exercises 11-12: What are type declaration files (.d.ts)?">
+Type declaration files (`.d.ts`) provide type information for JavaScript code without affecting runtime behavior.
+
+**When to use them:**
+- Adding types to JavaScript libraries that lack them
+- Declaring types for modules
+- Extending existing type definitions
+
+**Basic structure:**
+
+```typescript
+// declarations/str-utils/index.d.ts
+declare module 'str-utils' {
+    export function strReverse(str: string): string;
+    export function strToLower(str: string): string;
+    export function strToUpper(str: string): string;
+}
+```
+
+The `declare module` tells TypeScript "this is what this module looks like" without implementing it.
+
+Read more: [Declaration Files](https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html)
+</Accordion>
+
+<Accordion title="Exercise 13: How does module augmentation work?">
+Module augmentation lets you extend existing type definitions:
+
+```typescript
+// Original module has incomplete types
+import * as dateWizard from 'date-wizard';
+
+// Augment the module to add missing properties
+declare module 'date-wizard' {
+    interface DateDetails {
+        hours: number;   // Adding missing fields
+        minutes: number;
+        seconds: number;
+    }
+    
+    export function pad(value: number): string; // Adding missing export
+}
+```
+
+This merges your declarations with the existing ones, filling in gaps.
+
+Read more: [Declaration Merging](https://www.typescriptlang.org/docs/handbook/declaration-merging.html)
+</Accordion>
+
+<Accordion title="Exercise 14: What are function overloads?">
+Function overloads let you define multiple signatures for the same function:
+
+```typescript
+// Overload signatures
+function map<T, U>(mapper: (item: T) => U, input: T[]): U[];
+function map<T, U>(mapper: (item: T) => U): (input: T[]) => U[];
+function map(): typeof map;
+
+// Implementation signature
+function map(mapper?, input?) {
+    if (arguments.length === 0) return map;
+    if (arguments.length === 1) {
+        return (subInput) => subInput.map(mapper);
+    }
+    return input.map(mapper);
+}
+```
+
+TypeScript uses the overload signatures for type checking and the implementation signature for the actual code.
+</Accordion>
+
+<Accordion title="Exercise 15: How do I work with complex type transformations?">
+Use mapped types, conditional types, and utility types:
+
+```typescript
+// Mapped types
+type Getters<T> = {
+    [K in keyof T as `get${Capitalize<string & K>}`]: () => T[K];
+};
+
+// Conditional types
+type NonNullable<T> = T extends null | undefined ? never : T;
+
+// Combining techniques
+type ObjectManipulator<T> = {
+    set<K extends keyof T>(key: K, value: T[K]): ObjectManipulator<T>;
+    get<K extends keyof T>(key: K): T[K];
+    delete<K extends keyof T>(key: K): ObjectManipulator<Omit<T, K>>;
+};
+```
+
+Read more: [Mapped Types](https://www.typescriptlang.org/docs/handbook/2/mapped-types.html) and [Conditional Types](https://www.typescriptlang.org/docs/handbook/2/conditional-types.html)
+</Accordion>
+
+## Troubleshooting
+
+<Accordion title="TypeScript is not recognizing my type changes">
+**Common causes and solutions:**
+
+<Steps>
+1. **Restart your IDE/editor** - Sometimes the TypeScript language server needs a restart
+2. **Clear the TypeScript cache** - Delete `.tsbuildinfo` files if they exist
+3. **Check your tsconfig.json** - Ensure the exercise files are included
+4. **Verify imports** - Make sure all types are properly imported
+5. **Check for syntax errors** - A syntax error can break type inference
+</Steps>
+</Accordion>
+
+<Accordion title="I'm getting 'cannot find module' errors">
+This usually happens with exercises 11-13 that involve external modules.
+
+**Solution:**
+
+1. Check that the type declaration file exists in the right location:
+   ```
+   declarations/str-utils/index.d.ts
+   ```
+
+2. Verify your `tsconfig.json` includes the declarations directory:
+   ```json
+   {
+     "compilerOptions": {
+       "typeRoots": ["./node_modules/@types", "./declarations"]
+     }
+   }
+   ```
+
+3. Make sure the module name in `declare module` exactly matches the import:
+   ```typescript
+   // Import
+   import { strReverse } from 'str-utils';
+   
+   // Declaration (must match)
+   declare module 'str-utils' { ... }
+   ```
+</Accordion>
+
+<Accordion title="My solution works but tests fail">
+**Check these common issues:**
+
+1. **Exact type match** - TypeScript requires exact type matches. `string | number` is different from `number | string` in some contexts.
+
+2. **Read-only vs mutable** - The tests might expect readonly properties or vice versa.
+
+3. **Type narrowing** - Make sure you're properly narrowing types where needed.
+
+4. **Return types** - Verify your functions return exactly what the tests expect.
+
+Run the tests with:
+```bash
+npm test
+```
+
+And carefully read the error messages.
+</Accordion>
+
+<Accordion title="Error: 'X' is declared but never used">
+This is often a linting error, not a type error. For the exercises, you can usually ignore it or:
+
+1. Actually use the variable
+2. Prefix it with underscore: `_unusedVar`
+3. Adjust your ESLint/TSLint configuration
+
+However, if an exercise specifically asks you to export or use something, make sure you do!
+</Accordion>
+
+<Accordion title="How do I debug complex type errors?">
+**Step-by-step debugging approach:**
+
+<Steps>
+1. **Isolate the error** - Comment out code until you find the exact line
+2. **Check intermediate types** - Hover over variables to see inferred types
+3. **Create a type alias** - Extract complex types to see them clearly:
+   ```typescript
+   type DebugType = typeof myComplexExpression;
+   ```
+4. **Use type assertions temporarily** - To test hypotheses (remove afterward):
+   ```typescript
+   const value = expression as SomeType; // What type makes it work?
+   ```
+5. **Simplify the expression** - Break complex types into smaller pieces
+6. **Check the documentation** - The link at the bottom of each exercise is specifically chosen to help
+</Steps>
+</Accordion>
+
+## General TypeScript Questions
+
+<Accordion title="Should I use TypeScript in my projects?">
+**TypeScript is beneficial when:**
+
+- Your codebase is medium to large
+- Multiple developers work on the code
+- You want better IDE autocomplete and refactoring
+- The project will be maintained long-term
+- You're building a library or API
+
+**You might skip TypeScript when:**
+
+- Building a quick prototype or proof of concept
+- The project is very small (< 100 lines)
+- Your team is unfamiliar with types and learning would slow down critical work
+
+That said, TypeScript's benefits usually outweigh the learning curve!
+</Accordion>
+
+<Accordion title="What's the difference between TypeScript and JavaScript?">
+TypeScript is a **superset** of JavaScript, meaning:
+
+- All valid JavaScript is valid TypeScript
+- TypeScript adds optional static typing
+- TypeScript code compiles to JavaScript
+- Types are erased at runtime (no performance cost)
+
+**Key differences:**
+
+```typescript
+// JavaScript
+function greet(name) {
+    return `Hello, ${name}`;
+}
+
+// TypeScript
+function greet(name: string): string {
+    return `Hello, ${name}`;
+}
+```
+
+TypeScript catches errors at **compile time** that JavaScript would only catch at **runtime**.
+</Accordion>
+
+<Accordion title="How does TypeScript's type system differ from other languages?">
+TypeScript uses **structural typing** (duck typing), unlike nominal typing in languages like Java or C#.
+
+**Structural typing:**
+```typescript
+interface Point {
+    x: number;
+    y: number;
+}
+
+function printPoint(p: Point) {
+    console.log(`${p.x}, ${p.y}`);
+}
+
+// This works even though 'obj' isn't explicitly a Point
+const obj = { x: 10, y: 20, z: 30 };
+printPoint(obj); // OK! Has x and y
+```
+
+**Nominal typing (like Java):**
+```java
+// Would require explicit: class Obj extends Point
+```
+
+Structural typing is more flexible and fits JavaScript's dynamic nature.
+</Accordion>
+
+<Accordion title="Where can I get help if I'm really stuck?">
+**Resources for help:**
+
+1. **TypeScript Discord** - [discord.gg/typescript](https://discord.gg/typescript) - Active community
+2. **Stack Overflow** - Tag questions with `typescript`
+3. **Reddit** - r/typescript for discussions
+4. **GitHub Issues** - For bugs in the exercises themselves
+5. **The documentation links** - Each exercise links to relevant docs
+
+**Before asking:**
+- Read the error message carefully
+- Check the [Tips page](/resources/tips)
+- Try the TypeScript Playground to isolate the issue
+- Review the related documentation
+
+When asking for help:
+- Share your code (use a playground link)
+- Explain what you've tried
+- Include the error message
+- Mention which exercise you're on
+</Accordion>
+
+## Contributing
+
+<Accordion title="I found a bug or typo. How do I report it?">
+Contributions are welcome! The exercises are open source.
+
+1. Check if the issue already exists: [GitHub Issues](https://github.com/typescript-exercises/typescript-exercises/issues)
+2. Create a new issue with details
+3. Or submit a pull request with a fix
+
+See the contribution guidelines in the repository README.
+</Accordion>
+
+<Accordion title="Can I add my own exercises?">
+Yes! Follow these steps:
+
+1. Fork the repository
+2. Create a new exercise following the existing structure
+3. Include:
+   - `index.ts` with the problem
+   - `index.solution.ts` with the solution
+   - `test.ts` with tests
+   - Comments explaining the exercise
+   - Links to relevant documentation
+4. Submit a pull request
+
+Make sure exercises follow the progression and stick to the "no any" rule!
+</Accordion>
+
+<Note>
+Have a question not answered here? Check the [Additional Learning Resources](/resources/additional-learning) or ask in the TypeScript community!
+</Note>
