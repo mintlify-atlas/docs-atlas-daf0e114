@@ -1,0 +1,98 @@
+{
+  "projectType": "saas",
+  "projectName": "TypeScript Exercises",
+  "projectDescription": "An interactive learning platform with progressive TypeScript exercises covering basic to advanced type system features",
+  "theme": "palm",
+  "primaryColor": "#f4f608",
+  "lightColor": "#2d4d82",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "how-it-works"
+            ]
+          },
+          {
+            "group": "Exercises",
+            "pages": [
+              "exercises/overview",
+              "exercises/basic-typing",
+              "exercises/refining-types",
+              "exercises/union-types",
+              "exercises/merged-types",
+              "exercises/generics",
+              "exercises/type-declarations",
+              "exercises/module-augmentation",
+              "exercises/advanced-type-mapping"
+            ]
+          },
+          {
+            "group": "TypeScript Concepts",
+            "pages": [
+              "concepts/interfaces",
+              "concepts/type-guards",
+              "concepts/utility-types",
+              "concepts/generics-advanced",
+              "concepts/module-augmentation",
+              "concepts/conditional-types"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/tips",
+              "resources/additional-learning",
+              "resources/faq"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Contributing",
+        "groups": [
+          {
+            "group": "Development",
+            "pages": [
+              "contributing/overview",
+              "contributing/setup",
+              "contributing/guidelines"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "16 progressive TypeScript exercises",
+    "Interactive in-browser code editor",
+    "Real-time type checking and feedback",
+    "Covers basic to advanced type system features",
+    "Self-paced learning with solutions",
+    "Hands-on practice with practical examples"
+  ],
+  "publicApiSurface": [
+    "Exercise 1: Basic typing with interfaces",
+    "Exercise 2: Type predicates and type guards",
+    "Exercise 3: Union types",
+    "Exercise 4: Merged types and intersections",
+    "Exercise 5: Partial and utility types",
+    "Exercise 6: Function overloading",
+    "Exercise 7: Generics basics",
+    "Exercise 8: Generic constraints",
+    "Exercise 9: Advanced generics",
+    "Exercise 10: Promisify and advanced generics",
+    "Exercise 11: Type declarations for modules",
+    "Exercise 12: Ambient module declarations",
+    "Exercise 13: Module augmentation",
+    "Exercise 14: Mapped types",
+    "Exercise 15: Advanced type manipulation with classes",
+    "Exercise 16: Completion and next steps"
+  ]
+}
